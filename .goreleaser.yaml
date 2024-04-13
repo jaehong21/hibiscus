@@ -58,7 +58,7 @@ brews:
     commit_author:
       name: jaehong21
       email: dev@jaehong21.com
-    directory: hibiscus
+    directory: .
     homepage: https://jaehong21.com
     description: Modern terminal UI to interact with AWS resources
     test: |
