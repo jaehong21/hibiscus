@@ -1,8 +1,8 @@
 # 🌺 Hibiscus: Modern Terminal UI for AWS
 
-<!-- <p align="center"> -->
-<!--   <img src="https://via.placeholder.com/150" alt="Hibiscus Logo" width="150" height="150"> -->
-<!-- </p> -->
+<p align="center">
+  <img src="./docs/ecr-demo.gif" alt="Hibiscus ECR demo" width="800" height="516">
+</p>
 
 Hibiscus is a modern, terminal-based user interface (UI) that helps you interact with your AWS resources with ease. Built with a focus on simplicity and efficiency, Hibiscus provides a streamlined experience for managing your cloud infrastructure from the comfort of your terminal.
 
