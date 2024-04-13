@@ -7,18 +7,17 @@ before:
 release:
   prerelease: "false"
 
-env:
-  - CGO_ENABLED=0
-
 builds:
-  - id: linux
+  - env:
+      - CGO_ENABLED=0
     goos:
       - linux
       - darwin
+      - windows
     goarch:
       - amd64
       - arm64
-      - arm
+      # - arm
     goarm:
       - "7"
     ldflags:
@@ -29,37 +28,8 @@ builds:
       - -s -w -X "cmd.buildDate={{.Env.DATE}}"
       - -s -w -X "cmd.buildGoVersion={{.Env.GOVERSION}}"
 
-  - id: osx
-    goos:
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-    ldflags:
-      - -s -w -X "cmd.buildVersion={{.Version}}"
-      - -s -w -X "cmd.buildCommit={{.Commit}}"
-      - -s -w -X "cmd.buildOS={{.Os}}"
-      - -s -w -X "cmd.buildArch={{.Arch}}"
-      - -s -w -X "cmd.buildDate={{.Env.DATE}}"
-      - -s -w -X "cmd.buildGoVersion={{.Env.GOVERSION}}"
-
-  - id: windows
-    goos:
-      - windows
-    goarch:
-      - amd64
-      - arm64
-    ldflags:
-      - -s -w -X "cmd.buildVersion={{.Version}}"
-      - -s -w -X "cmd.buildCommit={{.Commit}}"
-      - -s -w -X "cmd.buildOS={{.Os}}"
-      - -s -w -X "cmd.buildArch={{.Arch}}"
-      - -s -w -X "cmd.buildDate={{.Env.DATE}}"
-      - -s -w -X "cmd.buildGoVersion={{.Env.GOVERSION}}"
-
 archives:
   - format: tar.gz
-    allow_different_binary_count: true
     # this name template makes the OS and Arch compatible with the results of `uname`.
     name_template: >-
       {{ .ProjectName }}_
