@@ -7,6 +7,7 @@ before:
 release:
   prerelease: "false"
 
+# https://goreleaser.com/errors/multiple-binaries-archive/
 builds:
   - env:
       - CGO_ENABLED=0
@@ -21,12 +22,12 @@ builds:
     goarm:
       - "7"
     ldflags:
-      - -s -w -X "cmd.buildVersion={{.Version}}"
-      - -s -w -X "cmd.buildCommit={{.Commit}}"
-      - -s -w -X "cmd.buildOS={{.Os}}"
-      - -s -w -X "cmd.buildArch={{.Arch}}"
-      - -s -w -X "cmd.buildDate={{.Env.DATE}}"
-      - -s -w -X "cmd.buildGoVersion={{.Env.GOVERSION}}"
+      - -s -w -X "github.com/jaehong21/hibiscus/cmd.buildVersion={{.Version}}"
+      - -s -w -X "github.com/jaehong21/hibiscus/cmd.buildCommit={{.Commit}}"
+      - -s -w -X "github.com/jaehong21/hibiscus/cmd.buildOS={{.Os}}"
+      - -s -w -X "github.com/jaehong21/hibiscus/cmd.buildArch={{.Arch}}"
+      - -s -w -X "github.com/jaehong21/hibiscus/cmd.buildDate={{.Env.DATE}}"
+      - -s -w -X "github.com/jaehong21/hibiscus/cmd.buildGoVersion={{.Env.GOVERSION}}"
 
 archives:
   - format: tar.gz
