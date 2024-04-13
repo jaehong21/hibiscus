@@ -1,0 +1,31 @@
+package route53
+
+import (
+	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/textinput"
+)
+
+type Model struct {
+	width  int
+	height int
+
+	textinput textinput.Model
+	loading   loading
+
+	tab   int
+	table tables
+
+	msg string
+	err error
+}
+
+type tables struct {
+	hostedZone table.Model
+	record     table.Model
+}
+
+type loading struct {
+	spinner spinner.Model
+	msg     string
+}
