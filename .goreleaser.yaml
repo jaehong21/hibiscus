@@ -28,8 +28,8 @@ builds:
       - -s -w -X github.com/jaehong21/hibiscus/cmd.buildCommit={{.Commit}}
       - -s -w -X github.com/jaehong21/hibiscus/cmd.buildOS={{.Os}}
       - -s -w -X github.com/jaehong21/hibiscus/cmd.buildArch={{.Arch}}
-      - -s -w -X github.com/jaehong21/hibiscus/cmd.buildDate={{.Env.Date}}
-      - -s -w -X github.com/jaehong21/hibiscus/cmd.buildGoVersion={{.Env.GoVersion}}
+      - -s -w -X github.com/jaehong21/hibiscus/cmd.buildDate={{.Env.DATE}}
+      - -s -w -X github.com/jaehong21/hibiscus/cmd.buildGoVersion={{.Env.GOVERSION}}
 
   - id: osx
     goos:
@@ -92,7 +92,7 @@ brews:
     commit_author:
       name: jaehong21
       email: dev@jaehong21.com
-    folder: hibiscus
+    directory: hibiscus
     homepage: https://jaehong21.com
     description: Modern terminal UI to interact with AWS resources
     test: |
