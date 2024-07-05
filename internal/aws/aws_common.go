@@ -4,15 +4,16 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/jaehong21/hibiscus/config"
 )
 
-var AWS_PROFILE = ""
-
 func GetAWSConfig(ctx context.Context) (aws.Config, error) {
-	if AWS_PROFILE == "" {
-		return config.LoadDefaultConfig(ctx)
+	profile := config.GetConfig().AwsProfile
+
+	if profile == "" {
+		return awsConfig.LoadDefaultConfig(ctx)
 	}
 
-	return config.LoadDefaultConfig(ctx, config.WithSharedConfigProfile(AWS_PROFILE))
+	return awsConfig.LoadDefaultConfig(ctx, awsConfig.WithSharedConfigProfile(profile))
 }

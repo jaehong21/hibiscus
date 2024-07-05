@@ -16,8 +16,9 @@ type Model struct {
 	tab   int
 	table tables
 
-	msg string
-	err error
+	focused bool
+	msg     string
+	err     error
 }
 
 type tables struct {
@@ -28,4 +29,8 @@ type tables struct {
 type loading struct {
 	spinner spinner.Model
 	msg     string
+}
+
+func (m Model) Focused() bool {
+	return m.focused
 }

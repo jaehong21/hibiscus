@@ -6,7 +6,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/jaehong21/hibiscus/internal/aws"
+	"github.com/jaehong21/hibiscus/config"
 	tui "github.com/jaehong21/hibiscus/tui/main"
 	"github.com/spf13/cobra"
 )
@@ -21,10 +21,12 @@ var (
 	buildGoVersion = "unknown"
 )
 
+var awsProfile string
+
 func init() {
 	rootCmd.AddCommand(versionCmd)
 
-	rootCmd.Flags().StringVarP(&aws.AWS_PROFILE, "profile", "p", "default", "AWS profile to use")
+	rootCmd.Flags().StringVarP(&awsProfile, "profile", "p", "default", "AWS profile to use")
 }
 
 var rootCmd = &cobra.Command{
@@ -34,7 +36,11 @@ var rootCmd = &cobra.Command{
             It is built with bubbletea and cobra.
             It aims to provide a simple and intuitive way to interact with AWS services.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		p := tea.NewProgram(tui.New(), tea.WithAltScreen())
+		newConfig := config.Initialize()
+		config.SetAwsProfile(awsProfile)
+
+		// p := tea.NewProgram(tui.New(newConfig), tea.WithAltScreen())
+		p := tea.NewProgram(tui.New(newConfig))
 		if _, err := p.Run(); err != nil {
 			log.Fatal(err)
 		}

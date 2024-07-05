@@ -1,8 +1,8 @@
 # 🌺 Hibiscus: Modern Terminal UI for AWS
 
-<!-- <p align="center"> -->
-<!--   <img src="https://via.placeholder.com/150" alt="Hibiscus Logo" width="150" height="150"> -->
-<!-- </p> -->
+<p align="center">
+  <img src="./docs/ecr-demo.gif" alt="Hibiscus ECR demo" width="800" height="516">
+</p>
 
 Hibiscus is a modern, terminal-based user interface (UI) that helps you interact with your AWS resources with ease. Built with a focus on simplicity and efficiency, Hibiscus provides a streamlined experience for managing your cloud infrastructure from the comfort of your terminal.
 
@@ -35,6 +35,15 @@ hibiscus --profile prod # with AWS CLI profile
 ```
 
 <!-- This will launch the Hibiscus UI, where you can navigate through your AWS services and resources using the keyboard. Refer to the [documentation](https://github.com/your-github-username/hibiscus/wiki) for more information on the available commands and features. -->
+
+## Milestone
+
+|      Service Name       | View | Edit |                                      Description                                      |
+| :---------------------: | :--: | :--: | :-----------------------------------------------------------------------------------: |
+|       Amazon ECR        |  ✓   |  ✕   |           Easily store, share, and deploy your container software anywhere            |
+|     AWS ECR Public      |  ✕   |  ✕   |      Easily store, share, and deploy your container software anywhere in public       |
+|     Amazon Route53      |  ✓   |  ✕   |     A reliable and cost-effective way to route end users to Internet applications     |
+| AWS SSM Parameter Store |  ✕   |  ✕   | Secure, hierarchical storage for configuration data management and secrets management |
 
 ## Contributing
 
