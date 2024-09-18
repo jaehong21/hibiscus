@@ -11,7 +11,7 @@ import (
 func (m Model) View() string {
 	var s string
 
-	s += "\n" + m.textinput.View() + "\n"
+	s += "\n" + m.textinput.View()
 
 	s += m.loadingRender()
 	s += m.tableRender()
@@ -77,6 +77,7 @@ func (m Model) footerRender() string {
 		s += " " + TabSelectedStyle.Render("<image>")
 	}
 
+	s += "\n" + " " + HelpStyle.Render("Max items: 1000")
 	s += "\n\n"
 
 	return s

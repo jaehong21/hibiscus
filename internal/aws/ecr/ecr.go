@@ -15,7 +15,11 @@ func DescribeRepositories() ([]types.Repository, error) {
 	if err := setupClient(); err != nil {
 		return nil, err
 	}
-	repositories, err := client.DescribeRepositories(context.TODO(), &ecr.DescribeRepositoriesInput{})
+
+	maxResults := int32(1000)
+	repositories, err := client.DescribeRepositories(context.TODO(), &ecr.DescribeRepositoriesInput{
+		MaxResults: &maxResults,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -36,18 +40,16 @@ func DescribeImages(repositoryName *string) ([]types.ImageDetail, error) {
 	}
 	images, err := client.DescribeImages(context.TODO(), &ecr.DescribeImagesInput{
 		RepositoryName: repositoryName,
+		Filter: &types.DescribeImagesFilter{
+			TagStatus: types.TagStatusTagged,
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	var result []types.ImageDetail
-	for _, image := range images.ImageDetails {
-		// list images with tag only
-		if len(image.ImageTags) > 0 {
-			result = append(result, image)
-		}
-	}
+	result = append(result, images.ImageDetails...)
 
 	// sort by ImagePushedAt
 	sort.Slice(result, func(i, j int) bool {
