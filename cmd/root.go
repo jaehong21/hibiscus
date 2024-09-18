@@ -39,8 +39,8 @@ var rootCmd = &cobra.Command{
 		newConfig := config.Initialize()
 		config.SetAwsProfile(awsProfile)
 
-		// p := tea.NewProgram(tui.New(newConfig), tea.WithAltScreen())
-		p := tea.NewProgram(tui.New(newConfig))
+		p := tea.NewProgram(tui.New(newConfig), tea.WithAltScreen())
+		// p := tea.NewProgram(tui.New(newConfig))
 		if _, err := p.Run(); err != nil {
 			log.Fatal(err)
 		}
