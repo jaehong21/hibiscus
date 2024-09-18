@@ -43,8 +43,8 @@ build:
 	@echo "Build complete"
 
 dev: build
-	@echo "Running ${PROJECT_NAME}..."
-	${TARGET_PATH}/${PROJECT_NAME}.${GOOS}.${GOARCH}
+	@echo "Running ${PROJECT_NAME} with arguments: $(ARGS)..."
+	${TARGET_PATH}/${PROJECT_NAME}.${GOOS}.${GOARCH} $(ARGS)
 	
 clean:
 	@echo "Cleaning up..."
