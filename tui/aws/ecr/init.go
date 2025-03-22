@@ -15,15 +15,15 @@ func New() Model {
 	sp := styles.DefaultSpinner()
 
 	ecrRepoColumns := []table.Column{
-		{Title: "Repository name", Width: 28},
-		{Title: "URI", Width: 75},
-		{Title: "Created at", Width: 35},
+		{Title: "Repository name"},
+		{Title: "URI"},
+		{Title: "Created at"},
 	}
 	ecrRepoImageColumns := []table.Column{
-		{Title: "Tag", Width: 27},
-		{Title: "Pushed at", Width: 33},
-		{Title: "Size", Width: 10},
-		{Title: "Digest", Width: 74},
+		{Title: "Tag"},
+		{Title: "Pushed at"},
+		{Title: "Size"},
+		{Title: "Digest"},
 	}
 
 	return Model{

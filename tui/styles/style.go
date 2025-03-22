@@ -30,6 +30,7 @@ const (
 )
 
 var SpinnerStyle = lipgloss.NewStyle().Foreground(pink)
+var SuccessStyle = lipgloss.NewStyle().Foreground(green)
 
 var (
 	TabBaseStyle = lipgloss.NewStyle().

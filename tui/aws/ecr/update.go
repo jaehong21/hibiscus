@@ -1,8 +1,22 @@
 package ecr
 
 import (
+	"time"
+
+	"github.com/atotto/clipboard"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+// Message to clear the success message after a delay
+type clearMsgMsg struct{}
+
+// Command to clear the message after a delay
+func clearMessageAfterDelay() tea.Cmd {
+	return tea.Tick(2*time.Second, func(time.Time) tea.Msg {
+		return clearMsgMsg{}
+	})
+}
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -10,12 +24,42 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 
-		// TODO: dynamic column width size
+		// Enable dynamic column width sizing
+		tableWidth := msg.Width - 2
 
-		// m.table.ecrRepo.SetWidth(msg.Width - 2)
-		// m.table.ecrRepoImage.SetWidth(msg.Width - 2)
-		m.table.ecrRepo.SetHeight(msg.Height - 21)
-		m.table.ecrRepoImage.SetHeight(msg.Height - 21)
+		// Set overall table widths
+		m.table.ecrRepo.SetWidth(tableWidth)
+		m.table.ecrRepoImage.SetWidth(tableWidth)
+
+		// Set table heights
+		m.table.ecrRepo.SetHeight(msg.Height - 12)
+		m.table.ecrRepoImage.SetHeight(msg.Height - 12)
+
+		// Update repository table column widths with new proportional columns
+		nameWidth := int(float64(tableWidth) * 0.20)    // 20% of width
+		uriWidth := int(float64(tableWidth) * 0.50)     // 50% of width
+		createdWidth := int(float64(tableWidth) * 0.25) // 25% of width
+
+		ecrRepoColumns := []table.Column{
+			{Title: "Repository name", Width: nameWidth},
+			{Title: "URI", Width: uriWidth},
+			{Title: "Created at", Width: createdWidth},
+		}
+		m.table.ecrRepo.SetColumns(ecrRepoColumns)
+
+		// Update image table column widths with new proportional columns
+		tagWidth := int(float64(tableWidth) * 0.20)    // 20% of width
+		pushedWidth := int(float64(tableWidth) * 0.16) // 16% of width
+		sizeWidth := int(float64(tableWidth) * 0.10)   // 10% of width
+		digestWidth := int(float64(tableWidth) * 0.49) // 49% of width
+
+		ecrRepoImageColumns := []table.Column{
+			{Title: "Tag", Width: tagWidth},
+			{Title: "Pushed at", Width: pushedWidth},
+			{Title: "Size", Width: sizeWidth},
+			{Title: "Digest", Width: digestWidth},
+		}
+		m.table.ecrRepoImage.SetColumns(ecrRepoImageColumns)
 
 		return m, nil
 
@@ -78,6 +122,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
+		case "C", "c", "Y", "y":
+			if m.table.ecrRepo.Focused() { // Copy repository URI when in ECR_REPO_TAB
+				repoURI := m.table.ecrRepo.SelectedRow()[1]
+				err := clipboard.WriteAll(repoURI)
+				if err != nil {
+					m.err = err
+				} else {
+					m.msg = "Repository URI copied to clipboard"
+				}
+				return m, clearMessageAfterDelay()
+			}
+			if m.table.ecrRepoImage.Focused() { // Copy full image URI with tag when in ECR_IMAGE_TAB
+				repoURI := m.table.ecrRepo.SelectedRow()[1]
+				imageTag := m.table.ecrRepoImage.SelectedRow()[0]
+				fullImageURI := repoURI + ":" + imageTag
+				err := clipboard.WriteAll(fullImageURI)
+				if err != nil {
+					m.err = err
+				} else {
+					m.msg = "Full image URI copied to clipboard"
+				}
+				return m, clearMessageAfterDelay()
+			}
+
 		}
 
 	case fetchReposMsg:
@@ -125,6 +193,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.table.ecrRepoImage.SetRows(msg.Rows)
 		m.table.ecrRepoImage.Focus()
 		return m, nil
+
+	case clearMsgMsg:
+		m.msg = ""
+		// Force a layout update by simulating a window resize with the current dimensions
+		return m, func() tea.Msg {
+			return tea.WindowSizeMsg{
+				Width:  m.width,
+				Height: m.height,
+			}
+		}
 	}
 
 	if m.loading.msg != "" { // if loading

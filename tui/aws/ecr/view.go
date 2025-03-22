@@ -14,8 +14,9 @@ func (m Model) View() string {
 	s += "\n" + m.textinput.View()
 
 	s += m.loadingRender()
-	s += m.tableRender()
 	s += m.errorRender(m.width - 10)
+	s += m.tableRender()
+	s += m.messageRender(m.width - 10)
 
 	s += m.footerRender()
 
@@ -61,6 +62,16 @@ func (m Model) errorRender(width int) string {
 	var s string
 	if m.err != nil {
 		s += "\n" + wordwrap.String(SpinnerStyle.Render("🤬 Error: "+m.err.Error()), width) + "\n\n"
+	}
+	return s
+}
+
+func (m Model) messageRender(width int) string {
+	var s string
+	if m.msg != "" {
+		s += " " + wordwrap.String(SuccessStyle.Render("✓ "+m.msg), width) + "\n"
+	} else {
+		s += ""
 	}
 	return s
 }
