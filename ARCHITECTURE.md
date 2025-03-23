@@ -26,11 +26,13 @@ hibiscus/
 ├── internal/            # Internal implementation code
 │   └── aws/             # AWS service implementations
 │       ├── ecr/         # ECR service implementation
+│       ├── elbv2/       # ELB (Elastic Load Balancer) service implementation
 │       ├── route53/     # Route53 service implementation
 │       └── aws_common.go# Common AWS functionality
 ├── tui/                 # Terminal UI components
 │   ├── aws/             # AWS service UI components
 │   │   ├── ecr/         # ECR UI implementation
+│   │   ├── elb/         # ELB UI implementation
 │   │   └── route53/     # Route53 UI implementation
 │   ├── main/            # Main application UI
 │   └── styles/          # UI styling components
@@ -90,7 +92,7 @@ Navigation follows a tab-based approach, where users can switch between differen
 ### Bubble Tea Components
 
 Hibiscus uses several Bubble Tea components:
-- `table`: For displaying tabular data (e.g., ECR repositories, Route53 records)
+- `table`: For displaying tabular data (e.g., ECR repositories, Route53 records, ELB load balancers and listeners)
 - `spinner`: For showing loading states when fetching data from AWS
 - `textinput`: For text input fields
 
@@ -106,6 +108,7 @@ The application uses Go's concurrency features (goroutines and channels) through
 
 As of the current implementation, Hibiscus supports viewing resources for:
 - Amazon ECR (Elastic Container Registry)
+- Amazon ELB (Elastic Load Balancer)
 - Amazon Route53 (DNS)
 
 Future plans include:

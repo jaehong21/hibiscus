@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jaehong21/hibiscus/config"
 	"github.com/jaehong21/hibiscus/tui/aws/ecr"
+	"github.com/jaehong21/hibiscus/tui/aws/elb"
 	"github.com/jaehong21/hibiscus/tui/aws/route53"
 )
 
@@ -14,11 +15,13 @@ import (
 var availableServices = []string{
 	"ecr",
 	"route53",
+	"elb",
 }
 
 type model struct {
 	ecr            tea.Model
 	route53        tea.Model
+	elb            tea.Model
 	navInput       textinput.Model
 	showNav        bool
 	navError       string
@@ -36,6 +39,7 @@ func New(config *config.Config) model {
 	return model{
 		ecr:            ecr.New(),
 		route53:        route53.New(),
+		elb:            elb.New(),
 		navInput:       navInput,
 		showNav:        false,
 		navError:       "",
@@ -58,10 +62,17 @@ func (m model) resendWindowSize() tea.Cmd {
 // but for our custom models, we need to call the Init() method manually
 
 func (m model) Init() tea.Cmd {
+	// Entrypoint to tab in Application
+
 	config.SetTabKey(config.ECR_TAB)
 	// config.SetTabKey(config.ROUTE53_TAB)
+	// config.SetTabKey(config.ELB_TAB)
 
-	return tea.Batch(m.ecr.Init(), m.route53.Init())
+	return tea.Batch(
+		m.ecr.Init(),
+		m.route53.Init(),
+		m.elb.Init(),
+	)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -114,6 +125,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					// Reinitialize the Route53 model and send window size
 					return m, tea.Batch(
 						m.route53.Init(),
+						m.resendWindowSize(), // Send the stored window size
+					)
+				case "elb":
+					config.SetTabKey(config.ELB_TAB)
+					// Reinitialize the ELB model and send window size
+					return m, tea.Batch(
+						m.elb.Init(),
 						m.resendWindowSize(), // Send the stored window size
 					)
 				default:
@@ -183,6 +201,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.route53, route53Cmd = m.route53.Update(msg)
 		cmds = append(cmds, route53Cmd)
 
+	case config.ELB_TAB:
+		var elbCmd tea.Cmd
+		m.elb, elbCmd = m.elb.Update(msg)
+		cmds = append(cmds, elbCmd)
+
 	default:
 
 	}
@@ -226,6 +249,9 @@ func (m model) View() string {
 
 	case config.ROUTE53_TAB:
 		s += m.route53.View()
+
+	case config.ELB_TAB:
+		s += m.elb.View()
 
 	default:
 

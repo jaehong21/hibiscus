@@ -38,12 +38,13 @@ hibiscus --profile prod # with AWS CLI profile
 
 ## Milestone
 
-|      Service Name       | View | Edit |                                      Description                                      |
-| :---------------------: | :--: | :--: | :-----------------------------------------------------------------------------------: |
-|       Amazon ECR        |  ✓   |  ✕   |           Easily store, share, and deploy your container software anywhere            |
-|     AWS ECR Public      |  ✕   |  ✕   |      Easily store, share, and deploy your container software anywhere in public       |
-|     Amazon Route53      |  ✓   |  ✕   |     A reliable and cost-effective way to route end users to Internet applications     |
-| AWS SSM Parameter Store |  ✕   |  ✕   | Secure, hierarchical storage for configuration data management and secrets management |
+|      Service Name       | View  | Edit  |                                      Description                                      |
+| :---------------------: | :---: | :---: | :-----------------------------------------------------------------------------------: |
+|       Amazon ECR        |   ✓   |   ✕   |           Easily store, share, and deploy your container software anywhere            |
+|     AWS ECR Public      |   ✕   |   ✕   |      Easily store, share, and deploy your container software anywhere in public       |
+|     Amazon Route53      |   ✓   |   ✕   |     A reliable and cost-effective way to route end users to Internet applications     |
+|       Amazon ELB        |   ✓   |   ✕   |             Distribute network traffic to improve application scalability             |
+| AWS SSM Parameter Store |   ✕   |   ✕   | Secure, hierarchical storage for configuration data management and secrets management |
 
 ## Contributing
 
@@ -60,7 +61,7 @@ We welcome contributions from the community! If you'd like to contribute to Hibi
 
 If you have any questions or feedback, feel free to reach out to us:
 
-- Email: [hibiscus@jaehong21.com](mailto:hibiscus@jaehong21.com)
+- Email: [dev@jaehong21.com](mailto:dev@jaehong21.com)
 - GitHub: [@jaehong21](https://github.com/jaehong21)
 
 Let's make cloud management a breeze with Hibiscus!
