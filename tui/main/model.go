@@ -1,21 +1,54 @@
 package tui
 
 import (
+	"strings"
+
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jaehong21/hibiscus/config"
 	"github.com/jaehong21/hibiscus/tui/aws/ecr"
 	"github.com/jaehong21/hibiscus/tui/aws/route53"
 )
 
+// Available AWS services for navigation
+var availableServices = []string{
+	"ecr",
+	"route53",
+}
+
 type model struct {
-	ecr     tea.Model
-	route53 tea.Model
+	ecr            tea.Model
+	route53        tea.Model
+	navInput       textinput.Model
+	showNav        bool
+	navError       string
+	suggestions    []string
+	selectedIndex  int
+	lastWindowSize tea.WindowSizeMsg // Store the last window size
 }
 
 func New(config *config.Config) model {
+	navInput := textinput.New()
+	navInput.Prompt = ": "
+	navInput.Placeholder = "type service name (ecr, route53, ...)"
+	navInput.CharLimit = 30
+
 	return model{
-		ecr:     ecr.New(),
-		route53: route53.New(),
+		ecr:            ecr.New(),
+		route53:        route53.New(),
+		navInput:       navInput,
+		showNav:        false,
+		navError:       "",
+		suggestions:    []string{},
+		selectedIndex:  0,
+		lastWindowSize: tea.WindowSizeMsg{}, // Initialize with zero values
+	}
+}
+
+// Helper function to create a command that sends the last window size
+func (m model) resendWindowSize() tea.Cmd {
+	return func() tea.Msg {
+		return m.lastWindowSize
 	}
 }
 
@@ -26,6 +59,7 @@ func New(config *config.Config) model {
 
 func (m model) Init() tea.Cmd {
 	config.SetTabKey(config.ECR_TAB)
+	// config.SetTabKey(config.ROUTE53_TAB)
 
 	return tea.Batch(m.ecr.Init(), m.route53.Init())
 }
@@ -33,6 +67,109 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
+	// Store window size when received
+	if windowMsg, ok := msg.(tea.WindowSizeMsg); ok {
+		m.lastWindowSize = windowMsg
+	}
+
+	// Handle navigation input
+	if m.showNav {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+			case "esc":
+				// Exit navigation mode
+				m.showNav = false
+				m.navInput.Reset()
+				m.navError = ""
+				m.suggestions = []string{}
+				m.selectedIndex = 0
+				return m, nil
+
+			case "enter":
+				// Try to navigate to the service
+				service := m.navInput.Value()
+				// If a suggestion is selected, use that instead
+				if m.selectedIndex < len(m.suggestions) && m.selectedIndex >= 0 {
+					service = m.suggestions[m.selectedIndex]
+				}
+
+				// Reset navigation state
+				m.showNav = false
+				m.navInput.Reset()
+				m.navError = ""
+				m.suggestions = []string{}
+				m.selectedIndex = 0
+
+				switch service {
+				case "ecr":
+					config.SetTabKey(config.ECR_TAB)
+					// Reinitialize the ECR model and send window size
+					return m, tea.Batch(
+						m.ecr.Init(),
+						m.resendWindowSize(), // Send the stored window size
+					)
+				case "route53":
+					config.SetTabKey(config.ROUTE53_TAB)
+					// Reinitialize the Route53 model and send window size
+					return m, tea.Batch(
+						m.route53.Init(),
+						m.resendWindowSize(), // Send the stored window size
+					)
+				default:
+					m.navError = "Service not supported: " + service
+					return m, nil
+				}
+
+			case "tab", "down":
+				// Cycle through suggestions
+				if len(m.suggestions) > 0 {
+					m.selectedIndex = (m.selectedIndex + 1) % len(m.suggestions)
+				}
+				return m, nil
+
+			case "shift+tab", "up":
+				// Cycle through suggestions backwards
+				if len(m.suggestions) > 0 {
+					m.selectedIndex = (m.selectedIndex - 1 + len(m.suggestions)) % len(m.suggestions)
+				}
+				return m, nil
+			}
+
+			// Filter suggestions
+			var cmd tea.Cmd
+			m.navInput, cmd = m.navInput.Update(msg)
+			cmds = append(cmds, cmd)
+
+			// Update suggestions based on current input
+			input := m.navInput.Value()
+			m.suggestions = []string{}
+			if input != "" {
+				for _, service := range availableServices {
+					if strings.Contains(service, strings.ToLower(input)) {
+						m.suggestions = append(m.suggestions, service)
+					}
+				}
+			}
+			m.selectedIndex = 0
+			return m, tea.Batch(cmds...)
+		}
+	} else {
+		// Normal mode
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+			case ":":
+				// Enter navigation mode
+				m.showNav = true
+				m.navInput.Focus()
+				m.navError = ""
+				return m, nil
+			}
+		}
+	}
+
+	// Regular tab handling
 	tab := config.GetConfig().TabKey
 
 	switch tab {
@@ -56,6 +193,31 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	var s string
 
+	// Show navigation if active
+	if m.showNav {
+		s += "\n " + m.navInput.View() + "\n"
+
+		// Show suggestions
+		if len(m.suggestions) > 0 {
+			s += "\n Suggestions:\n"
+			for i, suggestion := range m.suggestions {
+				if i == m.selectedIndex {
+					s += " > " + suggestion + "\n"
+				} else {
+					s += "   " + suggestion + "\n"
+				}
+			}
+		}
+
+		// Show error if any
+		if m.navError != "" {
+			s += "\n Error: " + m.navError + "\n"
+		}
+
+		return s
+	}
+
+	// Regular view
 	tab := config.GetConfig().TabKey
 
 	switch tab {

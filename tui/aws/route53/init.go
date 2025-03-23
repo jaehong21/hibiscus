@@ -15,16 +15,16 @@ func New() Model {
 	sp := styles.DefaultSpinner()
 
 	hostedZoneColumns := []table.Column{
-		{Title: "Name", Width: 25},
-		{Title: "Record count", Width: 15},
-		{Title: "ID", Width: 50},
+		{Title: "Name"},
+		{Title: "Record count"},
+		{Title: "ID"},
 	}
 	recordColumns := []table.Column{
-		{Title: "Record Name", Width: 38},
-		{Title: "Type", Width: 7},
-		{Title: "Values", Width: 70},
-		{Title: "TTL", Width: 8},
-		{Title: "Weight", Width: 7},
+		{Title: "Record Name"},
+		{Title: "Type"},
+		{Title: "Values"},
+		{Title: "TTL"},
+		{Title: "Weight"},
 	}
 
 	return Model{

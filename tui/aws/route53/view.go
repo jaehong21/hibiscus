@@ -18,6 +18,7 @@ func (m Model) View() string {
 	s += m.errorRender(m.width - 10)
 
 	s += m.footerRender()
+	// s += m.helpRender()
 
 	return s
 }
@@ -75,6 +76,36 @@ func (m Model) footerRender() string {
 	}
 
 	s += "\n\n"
+
+	return s
+}
+
+func (m Model) helpRender() string {
+	var s string
+	alignWidth := "17" // Must be string
+
+	items := []string{
+		fmt.Sprintf("%-"+alignWidth+"s Quit", "<crtl + c>"),
+		fmt.Sprintf("%-"+alignWidth+"s Navigate", "<:>"),
+		fmt.Sprintf("%-"+alignWidth+"s Search", "</>"),
+		fmt.Sprintf("%-"+alignWidth+"s Refresh", "<R(r)>"),
+	}
+
+	if m.tab == ROUTE53_HOSTED_ZONE_TAB {
+		items = append(items,
+			fmt.Sprintf("%-"+alignWidth+"s Select", "<enter>"),
+		)
+	}
+
+	if m.tab == ROUTE53_RECORD_TAB {
+		items = append(items,
+			fmt.Sprintf("%-"+alignWidth+"s Back", "<esc>, <Q(q)>"),
+		)
+	}
+
+	for _, item := range items {
+		s += " " + HelpStyle.Render(item) + "\n"
+	}
 
 	return s
 }

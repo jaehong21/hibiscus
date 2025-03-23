@@ -109,11 +109,14 @@ func filterRecords(hostedZoneID *string, query string) tea.Cmd {
 }
 
 func getRecordRows(records *[]types.ResourceRecordSet) []table.Row {
-	rows := []table.Row{}
+	var rows []table.Row
+
 	for _, record := range *records {
-		var ttl, weight string
+		var ttl string
+		var weight string
+
 		if record.TTL == nil {
-			ttl = "-"
+			ttl = ""
 		} else {
 			ttl = fmt.Sprintf("%d", *record.TTL)
 		}
@@ -124,28 +127,39 @@ func getRecordRows(records *[]types.ResourceRecordSet) []table.Row {
 			weight = fmt.Sprintf("%d", *record.Weight)
 		}
 
-		for _, rr := range record.ResourceRecords {
-			rows = append(rows, table.Row{
-				*record.Name,
-				string(record.Type),
-				*rr.Value,
-				ttl,
-				weight,
-			})
-			if record.AliasTarget != nil {
+		// Handle normal resource records
+		if len(record.ResourceRecords) > 0 {
+			for _, rr := range record.ResourceRecords {
 				rows = append(rows, table.Row{
 					*record.Name,
 					string(record.Type),
-					*record.AliasTarget.DNSName,
-					"",
-					"",
+					*rr.Value,
+					ttl,
+					weight,
 				})
 			}
+		} else if record.AliasTarget != nil {
+			// Handle alias records (CloudFront, ELB, etc.)
+			aliasType := "Alias"
+
+			// Identify the type of alias
+			if route53.IsCloudFrontAlias(record.AliasTarget.HostedZoneId) {
+				aliasType = "CloudFront"
+			} else if route53.IsELBAlias(record.AliasTarget.HostedZoneId) {
+				aliasType = "ELB"
+			}
+
+			rows = append(rows, table.Row{
+				*record.Name,
+				string(record.Type),
+				fmt.Sprintf("%s (%s) -> %s", aliasType, *record.AliasTarget.HostedZoneId, *record.AliasTarget.DNSName),
+				"", // No TTL for alias records
+				"", // No weight for alias records
+			})
 		}
 
 		// NOTE: add blank row
 		// rows = append(rows, table.Row{})
-
 	}
 
 	return rows
