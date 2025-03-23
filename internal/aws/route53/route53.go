@@ -11,6 +11,7 @@ import (
 var client *route53.Client
 
 // Map of AWS region to ELB hosted zone ID
+// including Application Load Balancer and Classic Load Balancer
 // https://docs.aws.amazon.com/general/latest/gr/elb.html
 var ELB_HOSTED_ZONE_IDS = map[string]string{
 	"us-east-1":      "Z35SXDOTRQ7X7K",
@@ -36,6 +37,32 @@ var ELB_HOSTED_ZONE_IDS = map[string]string{
 	"sa-east-1":      "Z2P70J7HTTTPLU",
 }
 
+// Map of AWS region to NLB (Network Load Balancer) hosted zone ID
+// https://docs.aws.amazon.com/general/latest/gr/elb.html
+var NLB_HOSTED_ZONE_IDS = map[string]string{
+	"us-east-1":      "Z26RNL4JYFTOTI",
+	"us-east-2":      "ZLMOA37VPKANP",
+	"us-west-1":      "Z24FKFUX50B4VW",
+	"us-west-2":      "Z18D5FSROUN65G",
+	"af-south-1":     "Z203XCE67M25HM",
+	"ap-east-1":      "Z12Y7K3UBGUAD1",
+	"ap-south-1":     "ZVDDRBQ08TROA",
+	"ap-northeast-3": "Z1GWIQ4HH19I5X",
+	"ap-northeast-2": "ZIBE1TIR4HY56",
+	"ap-southeast-1": "ZKVM4W9LS7TM",
+	"ap-southeast-2": "ZCT6FZBF4DROD",
+	"ap-northeast-1": "Z31USIVHYNEOWT",
+	"ca-central-1":   "Z2EPGBW3API2WT",
+	"eu-central-1":   "Z3F0SRJ5LGBH90",
+	"eu-west-1":      "Z2IFOLAFXWLO4F",
+	"eu-west-2":      "ZD4D7Y8KGAS4G",
+	"eu-south-1":     "Z23146JA1KNAFP",
+	"eu-west-3":      "Z1CMS0P5QUZ6D5",
+	"eu-north-1":     "Z1UDT6IFJ4EJM",
+	"me-south-1":     "Z3QSRYVP46NYYV",
+	"sa-east-1":      "ZTK26PT1VY4CU",
+}
+
 const (
 	// CloudFront hosted zone ID is global
 	// https://docs.aws.amazon.com/general/latest/gr/cf_region.html
@@ -56,11 +83,19 @@ func IsELBAlias(hostedZoneId *string) bool {
 		return false
 	}
 
+	// Check ALB and Classic Load Balancer IDs
 	for _, id := range ELB_HOSTED_ZONE_IDS {
 		if *hostedZoneId == id {
 			return true
 		}
 	}
+	// Check Network Load Balancer IDs
+	for _, id := range NLB_HOSTED_ZONE_IDS {
+		if *hostedZoneId == id {
+			return true
+		}
+	}
+
 	return false
 }
 
@@ -77,7 +112,6 @@ func ListHostedZones() ([]types.HostedZone, error) {
 	return zones.HostedZones, nil
 }
 
-// TODO: need to add for Cloudfront and ELB
 func ListRecords(hostedZoneID *string) ([]types.ResourceRecordSet, error) {
 	if err := setupClient(); err != nil {
 		return nil, err
