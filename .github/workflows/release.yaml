@@ -3,7 +3,7 @@ name: goreleaser
 on:
   push:
     tags:
-      - "*"
+      - "v*"
 
 permissions:
   contents: write
@@ -30,6 +30,13 @@ jobs:
           echo "DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
           echo "GOVERSION=$(go version | awk '{print $3}')" >> $GITHUB_OUTPUT
 
+          # Check if tag is a release candidate
+          if [[ ${{ github.ref_name }} =~ .*-rc\..* ]]; then
+            echo "IS_RC=true" >> $GITHUB_OUTPUT
+          else
+            echo "IS_RC=false" >> $GITHUB_OUTPUT
+          fi
+
       # More assembly might be required: Docker logins, GPG, etc.
       # It all depends on your needs.
       - name: Run GoReleaser
@@ -37,8 +44,8 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          # https://goreleaser.com/deprecations/#-rm-dist
-          args: release --clean
+          # If it's an RC tag, do a dry run
+          args: ${{ steps.setup-env.outputs.IS_RC == 'true' && 'release --skip-publish' || 'release --clean' }}
         env:
           # https://goreleaser.com/errors/resource-not-accessible-by-integration/
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
