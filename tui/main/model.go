@@ -167,6 +167,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.suggestions = append(m.suggestions, service)
 					}
 				}
+			} else {
+				// Show all available services when input is empty
+				m.suggestions = make([]string, len(availableServices))
+				copy(m.suggestions, availableServices)
 			}
 			m.selectedIndex = 0
 			return m, tea.Batch(cmds...)
@@ -181,6 +185,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.showNav = true
 				m.navInput.Focus()
 				m.navError = ""
+				// Populate suggestions with all available services immediately
+				m.suggestions = make([]string, len(availableServices))
+				copy(m.suggestions, availableServices)
+				m.selectedIndex = 0
 				return m, nil
 			}
 		}

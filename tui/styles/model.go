@@ -10,7 +10,7 @@ import (
 func DefeaultTextInput() textinput.Model {
 	ti := textinput.New()
 	ti.Prompt = "> "
-	ti.Placeholder = "type / to search"
+	ti.Placeholder = "`/` Search mode, `:` Command mode"
 	ti.CharLimit = 100
 
 	return ti
