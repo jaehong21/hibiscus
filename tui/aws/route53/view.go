@@ -70,7 +70,7 @@ func (m Model) footerRender() string {
 		s += " " + HelpStyle.Render(fmt.Sprintf("Total items: %d", len(m.table.hostedZone.Rows()))) + " "
 		s += " " + TabSelectedStyle.Render("<hosted zone>")
 	} else if m.tab == ROUTE53_RECORD_TAB {
-		// s += " " + HelpStyle.Render(fmt.Sprintf("Total items: %d", len(m.table.record.Rows()))) + " "
+		s += " " + HelpStyle.Render(fmt.Sprintf("Total items: %d", len(m.table.record.Rows()))) + " "
 		s += " " + TabBaseStyle.Render("<hosted zone: "+m.table.hostedZone.SelectedRow()[0]+">")
 		s += " " + TabSelectedStyle.Render("<record>")
 	}
