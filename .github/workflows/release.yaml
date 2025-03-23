@@ -45,7 +45,7 @@ jobs:
           distribution: goreleaser
           version: '~> v2'
           # If it's an RC tag, do a dry run
-          args: ${{ steps.setup-env.outputs.IS_RC == 'true' && 'release --skip-publish' || 'release --clean' }}
+          args: ${{ steps.setup-env.outputs.IS_RC == 'true' && 'release --skip=publish' || 'release --clean' }}
         env:
           # https://goreleaser.com/errors/resource-not-accessible-by-integration/
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
