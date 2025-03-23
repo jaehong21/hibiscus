@@ -64,9 +64,8 @@ func (m model) resendWindowSize() tea.Cmd {
 func (m model) Init() tea.Cmd {
 	// Entrypoint to tab in Application
 
-	config.SetTabKey(config.ECR_TAB)
-	// config.SetTabKey(config.ROUTE53_TAB)
-	// config.SetTabKey(config.ELB_TAB)
+	// No need to set tab key here, as it's already loaded from config file
+	// If there was no saved config, it defaults to HOME_TAB in the Initialize function
 
 	return tea.Batch(
 		m.ecr.Init(),

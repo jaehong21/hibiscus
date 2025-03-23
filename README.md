@@ -36,6 +36,27 @@ hibiscus --profile prod # with AWS CLI profile
 
 <!-- This will launch the Hibiscus UI, where you can navigate through your AWS services and resources using the keyboard. Refer to the [documentation](https://github.com/your-github-username/hibiscus/wiki) for more information on the available commands and features. -->
 
+## Configuration
+
+Hibiscus automatically saves your last used service tab (ECR, Route53, ELB, etc.) between sessions, so you can pick up right where you left off.
+
+The configuration file is stored following XDG standards:
+- If `XDG_CONFIG_HOME` is set: `$XDG_CONFIG_HOME/hibiscus/config.yaml`
+- Otherwise: `$HOME/.config/hibiscus/config.yaml`
+
+The configuration file is created automatically the first time you use Hibiscus and is updated whenever you switch between services.
+
+### Configuration File Contents
+
+The configuration file is a simple YAML file that stores your preferences:
+
+```yaml
+hibiscus:
+  service_name: ecr  # The last service you were using (ecr, route53, elb)
+```
+
+Note that AWS profile settings are NOT persisted and must be provided with the `--profile` flag for each session.
+
 ## Milestone
 
 |      Service Name       | View  | Edit  |                                      Description                                      |
