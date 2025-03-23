@@ -48,8 +48,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.table.ecrRepo.SetColumns(ecrRepoColumns)
 
 		// Update image table column widths with new proportional columns
-		tagWidth := int(float64(tableWidth) * 0.20)    // 20% of width
-		pushedWidth := int(float64(tableWidth) * 0.16) // 16% of width
+		tagWidth := int(float64(tableWidth) * 0.14)    // 14% of width
+		pushedWidth := int(float64(tableWidth) * 0.22) // 22% of width
 		sizeWidth := int(float64(tableWidth) * 0.10)   // 10% of width
 		digestWidth := int(float64(tableWidth) * 0.49) // 49% of width
 
@@ -69,6 +69,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "Q", "q", tea.KeyEsc.String():
+			if m.textinput.Focused() { // Exit from search input
+				m.textinput.Blur()
+				m.textinput.Reset()
+
+				// Focus the appropriate table based on current tab
+				if m.tab == ECR_REPO_TAB {
+					m.table.ecrRepo.Focus()
+				} else if m.tab == ECR_IMAGE_TAB {
+					m.table.ecrRepoImage.Focus()
+				}
+				return m, nil
+			}
+
 			if m.tab == ECR_IMAGE_TAB { // TAB: ECR_IMAGE_TAB -> ECR_REPO_TAB
 				m.tab = ECR_REPO_TAB
 				m.table.ecrRepo.Focus()

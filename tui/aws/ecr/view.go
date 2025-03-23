@@ -20,7 +20,7 @@ func (m Model) View() string {
 
 	s += m.footerRender()
 
-	// TODO: help render with keybindings
+	// Add help render with keybindings
 	// s += m.helpRender()
 
 	return s
@@ -100,6 +100,7 @@ func (m Model) helpRender() string {
 
 	items := []string{
 		fmt.Sprintf("%-"+alignWidth+"s Quit", "<crtl + c>"),
+		fmt.Sprintf("%-"+alignWidth+"s Navigate", "<:>"),
 		fmt.Sprintf("%-"+alignWidth+"s Search", "</>"),
 		fmt.Sprintf("%-"+alignWidth+"s Refresh", "<R(r)>"),
 	}
