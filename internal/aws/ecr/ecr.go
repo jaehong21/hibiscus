@@ -16,6 +16,7 @@ func DescribeRepositories() ([]types.Repository, error) {
 		return nil, err
 	}
 
+	// TODO: need to fetch all repositories when there are more than 1000
 	maxResults := int32(1000)
 	repositories, err := client.DescribeRepositories(context.TODO(), &ecr.DescribeRepositoriesInput{
 		MaxResults: &maxResults,
