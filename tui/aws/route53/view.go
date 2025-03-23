@@ -11,7 +11,7 @@ import (
 func (m Model) View() string {
 	var s string
 
-	s += "\n" + m.textinput.View() + "\n"
+	s += "\n" + m.textinput.View()
 
 	s += m.loadingRender()
 	s += m.tableRender()
