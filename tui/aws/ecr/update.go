@@ -137,6 +137,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "C", "c", "Y", "y":
 			if m.table.ecrRepo.Focused() { // Copy repository URI when in ECR_REPO_TAB
+				if len(m.table.ecrRepo.Rows()) == 0 { // Check if repository is selected
+					return m, nil
+				}
+
 				repoURI := m.table.ecrRepo.SelectedRow()[1]
 				err := clipboard.WriteAll(repoURI)
 				if err != nil {
@@ -147,6 +151,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, clearMessageAfterDelay()
 			}
 			if m.table.ecrRepoImage.Focused() { // Copy full image URI with tag when in ECR_IMAGE_TAB
+				if len(m.table.ecrRepoImage.Rows()) == 0 { // Check if image is selected
+					return m, nil
+				}
+				if len(m.table.ecrRepo.SelectedRow()) < 2 { // Check if repository and image are selected
+					return m, nil
+				}
+
 				repoURI := m.table.ecrRepo.SelectedRow()[1]
 				imageTag := m.table.ecrRepoImage.SelectedRow()[0]
 				fullImageURI := repoURI + ":" + imageTag
