@@ -14,7 +14,7 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
+      # - windows
     goarch:
       - amd64
       - arm64
@@ -30,7 +30,7 @@ builds:
       - -s -w -X "github.com/jaehong21/hibiscus/cmd.buildGoVersion={{.Env.GOVERSION}}"
 
 archives:
-  - format: tar.gz
+  - formats: [ "tar.gz" ]
     # this name template makes the OS and Arch compatible with the results of `uname`.
     name_template: >-
       {{ .ProjectName }}_
@@ -39,9 +39,9 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
     # use zip for windows archives
-    format_overrides:
-      - goos: windows
-        format: zip
+    # format_overrides:
+    #   - goos: windows
+    #     format: [ "zip" ]
 
 changelog:
   sort: asc
