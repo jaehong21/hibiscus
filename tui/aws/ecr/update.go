@@ -68,7 +68,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC.String(): // Quit
 			return m, tea.Quit
 
-		case "Q", "q", tea.KeyEsc.String():
+		case tea.KeyEsc.String():
 			if m.textinput.Focused() { // Exit from search input
 				m.textinput.Blur()
 				m.textinput.Reset()
