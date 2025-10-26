@@ -79,12 +79,12 @@ func Initialize() *Config {
 		TabKey:     ECR_TAB, // Default tab
 	}
 
-	// Try to load saved tab from file
-	hibiscusConfig, err := loadConfigFromFile()
-	if err == nil && hibiscusConfig != nil && hibiscusConfig.Hibiscus.ServiceName != "" {
-		// Only update the tab key, not the AWS profile
-		globalConfig.TabKey = serviceNameToTabKey(hibiscusConfig.Hibiscus.ServiceName)
-	}
+	// TODO: Try to load saved tab from file
+	// hibiscusConfig, err := loadConfigFromFile()
+	// if err == nil && hibiscusConfig != nil && hibiscusConfig.Hibiscus.ServiceName != "" {
+	// 	// Only update the tab key, not the AWS profile
+	// 	globalConfig.TabKey = serviceNameToTabKey(hibiscusConfig.Hibiscus.ServiceName)
+	// }
 
 	return globalConfig
 }
@@ -119,9 +119,10 @@ func SetTabKey(key int) {
 }
 
 // Load configuration from file
+// WARN: dead_code
 func loadConfigFromFile() (*HibiscusConfig, error) {
 	// Ensure config directory exists
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return nil, err
 	}
 
@@ -151,7 +152,7 @@ func saveConfigToFile() error {
 	}
 
 	// Ensure config directory exists
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return err
 	}
 
@@ -166,5 +167,5 @@ func saveConfigToFile() error {
 	}
 
 	// Write to file
-	return os.WriteFile(configFile, buf.Bytes(), 0644)
+	return os.WriteFile(configFile, buf.Bytes(), 0o644)
 }
