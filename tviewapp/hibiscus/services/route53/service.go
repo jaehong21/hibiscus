@@ -42,7 +42,8 @@ type Service struct {
 	currentZoneID   string
 	currentZoneName string
 
-	mu sync.Mutex
+	mu     sync.Mutex
+	active bool
 }
 
 func New(ctx hibiscus.ServiceContext) hibiscus.Service {
@@ -90,17 +91,13 @@ func (s *Service) Init() {
 }
 
 func (s *Service) Activate() {
-	if s.ctx.App == nil {
-		return
-	}
-	if s.current == recordTab {
-		s.ctx.App.SetFocus(s.recTable)
-	} else {
-		s.ctx.App.SetFocus(s.zoneTable)
-	}
+	s.active = true
+	s.focusCurrentTable()
 }
 
-func (s *Service) Deactivate() {}
+func (s *Service) Deactivate() {
+	s.active = false
+}
 
 func (s *Service) Refresh() {
 	if s.current == recordTab && s.currentZoneID != "" {
@@ -111,7 +108,7 @@ func (s *Service) Refresh() {
 }
 
 func (s *Service) EnterFilterMode() bool {
-	if s.ctx.App == nil {
+	if !s.canFocus() {
 		return false
 	}
 	s.ctx.App.SetFocus(s.filter)
@@ -149,13 +146,10 @@ func (s *Service) HandleInput(event *tcell.EventKey) *tcell.EventKey {
 
 func (s *Service) exitFilterMode() {
 	s.filter.SetText("")
-	if s.ctx.App == nil {
-		return
-	}
 	if s.current == recordTab {
-		s.ctx.App.SetFocus(s.recTable)
+		s.setFocus(s.recTable)
 	} else {
-		s.ctx.App.SetFocus(s.zoneTable)
+		s.setFocus(s.zoneTable)
 	}
 }
 
@@ -333,9 +327,7 @@ func (s *Service) showZoneTab() {
 	s.current = zoneTab
 	s.pages.SwitchToPage("zones")
 	s.zoneTable.SetTitle("Route53 hosted zones")
-	if s.ctx.App != nil {
-		s.ctx.App.SetFocus(s.zoneTable)
-	}
+	s.setFocus(s.zoneTable)
 }
 
 func (s *Service) showRecordTab() {
@@ -346,9 +338,7 @@ func (s *Service) showRecordTab() {
 	}
 	s.recTable.SetTitle(title)
 	s.pages.SwitchToPage("records")
-	if s.ctx.App != nil {
-		s.ctx.App.SetFocus(s.recTable)
-	}
+	s.setFocus(s.recTable)
 }
 
 func zoneMatches(zone types.HostedZone, query string) bool {
@@ -433,4 +423,23 @@ func buildTable(title string) *tview.Table {
 	tbl.SetTitle(title)
 	tbl.SetBorderColor(tcell.ColorDimGray)
 	return tbl
+}
+
+func (s *Service) canFocus() bool {
+	return s.ctx.App != nil && s.active
+}
+
+func (s *Service) setFocus(p tview.Primitive) {
+	if !s.canFocus() || p == nil {
+		return
+	}
+	s.ctx.App.SetFocus(p)
+}
+
+func (s *Service) focusCurrentTable() {
+	if s.current == recordTab {
+		s.setFocus(s.recTable)
+	} else {
+		s.setFocus(s.zoneTable)
+	}
 }

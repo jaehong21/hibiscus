@@ -42,7 +42,8 @@ type Service struct {
 	currentRepo    string
 	currentRepoURI string
 
-	mu sync.Mutex
+	mu     sync.Mutex
+	active bool
 }
 
 func New(ctx hibiscus.ServiceContext) hibiscus.Service {
@@ -85,18 +86,13 @@ func (s *Service) Init() {
 }
 
 func (s *Service) Activate() {
-	if s.ctx.App == nil {
-		return
-	}
-	switch s.current {
-	case imageTab:
-		s.ctx.App.SetFocus(s.imageTable)
-	default:
-		s.ctx.App.SetFocus(s.repoTable)
-	}
+	s.active = true
+	s.focusCurrentTable()
 }
 
-func (s *Service) Deactivate() {}
+func (s *Service) Deactivate() {
+	s.active = false
+}
 
 func (s *Service) Refresh() {
 	if s.current == imageTab && s.currentRepo != "" {
@@ -107,7 +103,7 @@ func (s *Service) Refresh() {
 }
 
 func (s *Service) EnterFilterMode() bool {
-	if s.ctx.App == nil {
+	if !s.canFocus() {
 		return false
 	}
 	s.ctx.App.SetFocus(s.filter)
@@ -159,13 +155,9 @@ func (s *Service) exitFilterMode() {
 	s.filter.SetText("")
 	switch s.current {
 	case imageTab:
-		if s.ctx.App != nil {
-			s.ctx.App.SetFocus(s.imageTable)
-		}
+		s.setFocus(s.imageTable)
 	default:
-		if s.ctx.App != nil {
-			s.ctx.App.SetFocus(s.repoTable)
-		}
+		s.setFocus(s.repoTable)
 	}
 }
 
@@ -357,7 +349,8 @@ func (s *Service) renderImages() {
 		if s.currentRepo != "" {
 			msg = "No images match this filter"
 		}
-		table.SetCell(1, 0, tableCell(msg).SetSelectable(false))
+		table.SetCell(1, 0, tableCell(msg))
+		table.Select(1, 0)
 		return
 	}
 
@@ -386,18 +379,14 @@ func (s *Service) showRepoTab() {
 	s.current = repoTab
 	s.pages.SwitchToPage("repos")
 	s.repoTable.SetTitle("ECR repositories")
-	if s.ctx.App != nil {
-		s.ctx.App.SetFocus(s.repoTable)
-	}
+	s.setFocus(s.repoTable)
 }
 
 func (s *Service) showImageTab(repo string) {
 	s.current = imageTab
 	s.pages.SwitchToPage("images")
 	s.imageTable.SetTitle(fmt.Sprintf("Images for %s", repo))
-	if s.ctx.App != nil {
-		s.ctx.App.SetFocus(s.imageTable)
-	}
+	s.setFocus(s.imageTable)
 }
 
 func matchImage(image types.ImageDetail, query string) bool {
@@ -441,4 +430,24 @@ func buildTable(title string) *tview.Table {
 	tbl.SetTitle(title)
 	tbl.SetBorderColor(tcell.ColorDimGray)
 	return tbl
+}
+
+func (s *Service) canFocus() bool {
+	return s.ctx.App != nil && s.active
+}
+
+func (s *Service) setFocus(p tview.Primitive) {
+	if !s.canFocus() || p == nil {
+		return
+	}
+	s.ctx.App.SetFocus(p)
+}
+
+func (s *Service) focusCurrentTable() {
+	switch s.current {
+	case imageTab:
+		s.setFocus(s.imageTable)
+	default:
+		s.setFocus(s.repoTable)
+	}
 }

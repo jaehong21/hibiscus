@@ -42,6 +42,8 @@ type Service struct {
 	selectedLoadBalancerArn  string
 	selectedLoadBalancerName string
 	selectedListenerArn      string
+
+	active bool
 }
 
 func New(ctx hibiscus.ServiceContext) hibiscus.Service {
@@ -89,20 +91,13 @@ func (s *Service) Init() {
 }
 
 func (s *Service) Activate() {
-	if s.ctx.App == nil {
-		return
-	}
-	switch s.current {
-	case listenerTab:
-		s.ctx.App.SetFocus(s.listenerTable)
-	case ruleTab:
-		s.ctx.App.SetFocus(s.ruleTable)
-	default:
-		s.ctx.App.SetFocus(s.lbTable)
-	}
+	s.active = true
+	s.focusCurrentTable()
 }
 
-func (s *Service) Deactivate() {}
+func (s *Service) Deactivate() {
+	s.active = false
+}
 
 func (s *Service) Refresh() {
 	switch s.current {
@@ -121,7 +116,7 @@ func (s *Service) Refresh() {
 }
 
 func (s *Service) EnterFilterMode() bool {
-	if s.ctx.App == nil {
+	if !s.canFocus() {
 		return false
 	}
 	if s.current != lbTab {
@@ -175,16 +170,13 @@ func (s *Service) HandleInput(event *tcell.EventKey) *tcell.EventKey {
 
 func (s *Service) exitFilterMode() {
 	s.filter.SetText("")
-	if s.ctx.App == nil {
-		return
-	}
 	switch s.current {
 	case listenerTab:
-		s.ctx.App.SetFocus(s.listenerTable)
+		s.setFocus(s.listenerTable)
 	case ruleTab:
-		s.ctx.App.SetFocus(s.ruleTable)
+		s.setFocus(s.ruleTable)
 	default:
-		s.ctx.App.SetFocus(s.lbTable)
+		s.setFocus(s.lbTable)
 	}
 }
 
@@ -414,9 +406,7 @@ func (s *Service) showLoadBalancerTab() {
 	s.current = lbTab
 	s.pages.SwitchToPage("lbs")
 	s.lbTable.SetTitle("Load balancers")
-	if s.ctx.App != nil {
-		s.ctx.App.SetFocus(s.lbTable)
-	}
+	s.setFocus(s.lbTable)
 }
 
 func (s *Service) showListenerTab() {
@@ -427,9 +417,7 @@ func (s *Service) showListenerTab() {
 	}
 	s.listenerTable.SetTitle(title)
 	s.pages.SwitchToPage("listeners")
-	if s.ctx.App != nil {
-		s.ctx.App.SetFocus(s.listenerTable)
-	}
+	s.setFocus(s.listenerTable)
 }
 
 func (s *Service) showRuleTab() {
@@ -440,9 +428,7 @@ func (s *Service) showRuleTab() {
 	}
 	s.ruleTable.SetTitle(title)
 	s.pages.SwitchToPage("rules")
-	if s.ctx.App != nil {
-		s.ctx.App.SetFocus(s.ruleTable)
-	}
+	s.setFocus(s.ruleTable)
 }
 
 func summarizeAction(actions []types.Action) string {
@@ -563,4 +549,26 @@ func valueOr(ptr *string) string {
 		return ""
 	}
 	return *ptr
+}
+
+func (s *Service) canFocus() bool {
+	return s.ctx.App != nil && s.active
+}
+
+func (s *Service) setFocus(p tview.Primitive) {
+	if !s.canFocus() || p == nil {
+		return
+	}
+	s.ctx.App.SetFocus(p)
+}
+
+func (s *Service) focusCurrentTable() {
+	switch s.current {
+	case listenerTab:
+		s.setFocus(s.listenerTable)
+	case ruleTab:
+		s.setFocus(s.ruleTable)
+	default:
+		s.setFocus(s.lbTable)
+	}
 }
