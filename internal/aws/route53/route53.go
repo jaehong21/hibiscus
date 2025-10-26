@@ -117,14 +117,69 @@ func ListRecords(hostedZoneID *string) ([]types.ResourceRecordSet, error) {
 		return nil, err
 	}
 
-	records, err := client.ListResourceRecordSets(context.TODO(), &route53.ListResourceRecordSetsInput{
-		HostedZoneId: hostedZoneID,
-	})
-	if err != nil {
-		return nil, err
+	var (
+		results         []types.ResourceRecordSet
+		startName       *string
+		startIdentifier *string
+		startType       types.RRType
+		hasStartType    bool
+	)
+
+	for {
+		input := route53.ListResourceRecordSetsInput{
+			HostedZoneId: hostedZoneID,
+		}
+		if startName != nil {
+			input.StartRecordName = startName
+		}
+		if startIdentifier != nil {
+			input.StartRecordIdentifier = startIdentifier
+		}
+		if hasStartType {
+			input.StartRecordType = startType
+		}
+
+		resp, err := client.ListResourceRecordSets(context.TODO(), &input)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, resp.ResourceRecordSets...)
+
+		if !resp.IsTruncated {
+			break
+		}
+
+		startName = resp.NextRecordName
+		startIdentifier = resp.NextRecordIdentifier
+		if resp.NextRecordType != "" {
+			startType = resp.NextRecordType
+			hasStartType = true
+		} else {
+			hasStartType = false
+		}
 	}
 
-	return records.ResourceRecordSets, nil
+	return results, nil
+}
+
+func UpsertRecord(hostedZoneID *string, record types.ResourceRecordSet) error {
+	if err := setupClient(); err != nil {
+		return err
+	}
+
+	_, err := client.ChangeResourceRecordSets(context.TODO(), &route53.ChangeResourceRecordSetsInput{
+		HostedZoneId: hostedZoneID,
+		ChangeBatch: &types.ChangeBatch{
+			Changes: []types.Change{
+				{
+					Action:            types.ChangeActionUpsert,
+					ResourceRecordSet: &record,
+				},
+			},
+		},
+	})
+
+	return err
 }
 
 func setupClient() error {

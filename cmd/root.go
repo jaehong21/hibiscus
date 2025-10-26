@@ -5,9 +5,11 @@ import (
 	"log"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jaehong21/hibiscus/config"
-	tui "github.com/jaehong21/hibiscus/tui/main"
+	app "github.com/jaehong21/hibiscus/tviewapp/hibiscus"
+	ecrsvc "github.com/jaehong21/hibiscus/tviewapp/hibiscus/services/ecr"
+	elbsvc "github.com/jaehong21/hibiscus/tviewapp/hibiscus/services/elb"
+	route53svc "github.com/jaehong21/hibiscus/tviewapp/hibiscus/services/route53"
 	"github.com/spf13/cobra"
 )
 
@@ -30,18 +32,27 @@ func init() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "hib",
+	Use:   "hibiscus",
 	Short: "Hibiscus is a modern terminal UI for AWS console",
 	Long: `Hibiscus is a modern terminal UI for AWS console. 
-            It is built with bubbletea and cobra.
+            It is built with tview and cobra.
             It aims to provide a simple and intuitive way to interact with AWS services.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		newConfig := config.Initialize()
 		config.SetAwsProfile(awsProfile)
 
-		p := tea.NewProgram(tui.New(newConfig), tea.WithAltScreen())
-		// p := tea.NewProgram(tui.New(newConfig))
-		if _, err := p.Run(); err != nil {
+		factories := []app.ServiceFactory{
+			func(ctx app.ServiceContext) app.Service { return ecrsvc.New(ctx) },
+			func(ctx app.ServiceContext) app.Service { return route53svc.New(ctx) },
+			func(ctx app.ServiceContext) app.Service { return elbsvc.New(ctx) },
+		}
+
+		app, err := app.New(newConfig, factories)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := app.Run(); err != nil {
 			log.Fatal(err)
 		}
 	},
