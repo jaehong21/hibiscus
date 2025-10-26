@@ -39,18 +39,36 @@ func DescribeImages(repositoryName *string) ([]types.ImageDetail, error) {
 	if err := setupClient(); err != nil {
 		return nil, err
 	}
-	images, err := client.DescribeImages(context.TODO(), &ecr.DescribeImagesInput{
-		RepositoryName: repositoryName,
-		Filter: &types.DescribeImagesFilter{
-			TagStatus: types.TagStatusTagged,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
+	var (
+		result    []types.ImageDetail
+		nextToken *string
+		max       = int32(1000)
+	)
 
-	var result []types.ImageDetail
-	result = append(result, images.ImageDetails...)
+	for {
+		input := &ecr.DescribeImagesInput{
+			RepositoryName: repositoryName,
+			Filter: &types.DescribeImagesFilter{
+				TagStatus: types.TagStatusTagged,
+			},
+			MaxResults: &max,
+		}
+		if nextToken != nil {
+			input.NextToken = nextToken
+		}
+
+		resp, err := client.DescribeImages(context.TODO(), input)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, resp.ImageDetails...)
+
+		if resp.NextToken == nil || len(*resp.NextToken) == 0 {
+			break
+		}
+		nextToken = resp.NextToken
+	}
 
 	// sort by ImagePushedAt
 	sort.Slice(result, func(i, j int) bool {
