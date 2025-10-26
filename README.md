@@ -4,7 +4,7 @@
   <img src="./docs/ecr-demo.gif" alt="Hibiscus ECR demo" width="800" height="516">
 </p>
 
-Hibiscus is a modern, terminal-based user interface (UI) that helps you interact with your AWS resources with ease. Built with a focus on simplicity and efficiency, Hibiscus provides a streamlined experience for managing your cloud infrastructure from the comfort of your terminal.
+Hibiscus is a modern, terminal-based user interface (UI) that helps you interact with your AWS resources with ease. Built with a focus on simplicity and efficiency, Hibiscus provides a streamlined experience for managing your cloud infrastructure from the comfort of your terminal. The interface is powered by [tview](https://github.com/rivo/tview) for instant redraws, rich tables, and modal workflows.
 
 ## Features
 
@@ -34,16 +34,26 @@ hibiscus # using 'default' AWS CLI profile
 hibiscus --profile prod # with AWS CLI profile
 ```
 
+### Keyboard shortcuts
+
+- `:` – open the command palette and jump to `ecr`, `route53`, or `elb`
+- `/` – focus the active view's filter (repositories, hosted zones, load balancers)
+- `Enter` – drill down one level (repo → images, zone → records, load balancer → listeners → rules)
+- `Esc` – back out of the current level or exit filter mode
+- `R` – refresh the active view
+- `Ctrl+C` – quit the application
+
 ### Route53 tview proof of concept
 
-This branch also ships a standalone tview-based prototype for the Route53 experience.  
+The primary `hibiscus` command now uses tview for every AWS surface, but this branch keeps a dedicated Route53 prototype so we can continue experimenting with record-edit modals.
 Run it directly from source:
 
 ```bash
 go run ./cmd/route53tview --profile prod
 ```
 
-Key bindings:
+Key bindings (prototype):
+
 - `Tab` / `Shift+Tab` – switch focus between the hosted zone table, filters, and records table.
 - `/` – jump into the active table's filter input.
 - `R` – refresh the focused table (hosted zones or records).
@@ -59,6 +69,7 @@ The left table lists hosted zones, the right table shows records for the selecte
 Hibiscus automatically saves your last used service tab (ECR, Route53, ELB, etc.) between sessions, so you can pick up right where you left off.
 
 The configuration file is stored following XDG standards:
+
 - If `XDG_CONFIG_HOME` is set: `$XDG_CONFIG_HOME/hibiscus/config.yaml`
 - Otherwise: `$HOME/.config/hibiscus/config.yaml`
 
@@ -70,20 +81,20 @@ The configuration file is a simple YAML file that stores your preferences:
 
 ```yaml
 hibiscus:
-  service_name: ecr  # The last service you were using (ecr, route53, elb)
+  service_name: ecr # The last service you were using (ecr, route53, elb)
 ```
 
 Note that AWS profile settings are NOT persisted and must be provided with the `--profile` flag for each session.
 
 ## Milestone
 
-|      Service Name       | View  | Edit  |                                      Description                                      |
-| :---------------------: | :---: | :---: | :-----------------------------------------------------------------------------------: |
-|       Amazon ECR        |   ✓   |   ✕   |           Easily store, share, and deploy your container software anywhere            |
-|     AWS ECR Public      |   ✕   |   ✕   |      Easily store, share, and deploy your container software anywhere in public       |
-|     Amazon Route53      |   ✓   |   ✕   |     A reliable and cost-effective way to route end users to Internet applications     |
-|       Amazon ELB        |   ✓   |   ✕   |             Distribute network traffic to improve application scalability             |
-| AWS SSM Parameter Store |   ✕   |   ✕   | Secure, hierarchical storage for configuration data management and secrets management |
+|      Service Name       | View | Edit |                                      Description                                      |
+| :---------------------: | :--: | :--: | :-----------------------------------------------------------------------------------: |
+|       Amazon ECR        |  ✓   |  ✕   |           Easily store, share, and deploy your container software anywhere            |
+|     AWS ECR Public      |  ✕   |  ✕   |      Easily store, share, and deploy your container software anywhere in public       |
+|     Amazon Route53      |  ✓   |  ✕   |     A reliable and cost-effective way to route end users to Internet applications     |
+|       Amazon ELB        |  ✓   |  ✕   |             Distribute network traffic to improve application scalability             |
+| AWS SSM Parameter Store |  ✕   |  ✕   | Secure, hierarchical storage for configuration data management and secrets management |
 
 ## Contributing
 

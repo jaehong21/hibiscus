@@ -8,7 +8,7 @@ Hibiscus is a modern terminal-based user interface for AWS services built in Go.
 
 Hibiscus follows a clean architecture pattern with clear separation of concerns:
 
-1. **Terminal UI Layer**: Built with the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework, which implements the Model-View-Update (MVU) pattern
+1. **Terminal UI Layer**: Built with the [tview](https://github.com/rivo/tview) framework for immediate-mode terminal widgets, composed inside a shared shell
 2. **CLI Layer**: Uses [Cobra](https://github.com/spf13/cobra) for command-line interface functionality
 3. **AWS Integration Layer**: Handles AWS API calls and business logic
 4. **Configuration Layer**: Manages application and AWS configuration
@@ -29,13 +29,14 @@ hibiscus/
 │       ├── elbv2/       # ELB (Elastic Load Balancer) service implementation
 │       ├── route53/     # Route53 service implementation
 │       └── aws_common.go# Common AWS functionality
-├── tui/                 # Terminal UI components
-│   ├── aws/             # AWS service UI components
-│   │   ├── ecr/         # ECR UI implementation
-│   │   ├── elb/         # ELB UI implementation
-│   │   └── route53/     # Route53 UI implementation
-│   ├── main/            # Main application UI
-│   └── styles/          # UI styling components
+├── tviewapp/            # Terminal UI components (tview)
+│   ├── hibiscus/        # Shared shell, layout, nav modes
+│   │   └── services/    # Service-specific UI packages
+│   │       ├── ecr/
+│   │       ├── route53/
+│   │       └── elb/
+│   └── route53/         # Standalone proof-of-concept with edit modals
+├── tui/                 # Legacy Bubble Tea UI kept for reference
 ├── utils/               # Utility functions
 ├── main.go              # Application entry point
 └── go.mod, go.sum       # Go module definitions
@@ -45,22 +46,23 @@ hibiscus/
 
 ### Command Layer (cmd/)
 
-The command layer is built with Cobra and provides the CLI interface for the application. The main command is defined in `cmd/root.go` which initializes the application and starts the Bubble Tea program.
+The command layer is built with Cobra and provides the CLI interface for the application. The main command is defined in `cmd/root.go`, where it initializes configuration, builds the service list, and boots the shared tview application shell.
 
-### Terminal UI Layer (tui/)
+### Terminal UI Layer (tviewapp/hibiscus)
 
-The TUI layer is built with Bubble Tea and follows the Model-View-Update (MVU) pattern:
+The production UI is implemented with tview. The `tviewapp/hibiscus` package owns:
 
-1. **Model**: Defines the application state
-2. **View**: Renders the UI based on the model state
-3. **Update**: Handles user input and updates the model state
+1. A global shell (`App`) that lays out header, status, error bars, and an interchangeable content area.
+2. A lightweight command palette bound to `:` that lets users jump directly to `ecr`, `route53`, or `elb`.
+3. A `Service` interface so each AWS surface can supply its own primitives, filter handling, refresh logic, and keybindings.
 
-Each AWS service has its own UI implementation in the `tui/aws/` directory, which includes:
-- `model.go`: Defines the service-specific state
-- `view.go`: Renders the service-specific UI
-- `update.go`: Handles user input for the service
-- `cmd.go`: Defines commands for the service (e.g., fetching data)
-- `init.go`: Initializes the service UI components
+Concrete services live under `tviewapp/hibiscus/services/<service>` and compose the shared infrastructure:
+
+- **ECR**: repository table → image table with copy-to-clipboard helpers
+- **Route53**: hosted zone table → record table with smart alias rendering
+- **ELB**: load balancer table → listeners → rules
+
+Legacy Bubble Tea code remains in `tui/` for historical context but is no longer wired into the CLI.
 
 ### AWS Integration Layer (internal/aws/)
 
@@ -69,6 +71,7 @@ This layer handles the actual AWS API calls and business logic, separated from t
 ### Configuration Layer (config/)
 
 Manages application configuration using a global singleton pattern with mutex protection for thread safety. Handles settings such as:
+
 - Current AWS profile
 - Current UI tab
 - Other application settings
@@ -77,24 +80,22 @@ Manages application configuration using a global singleton pattern with mutex pr
 
 1. User starts the application with `hibiscus` or `hibiscus --profile <aws-profile>`
 2. `main.go` calls `cmd.Execute()` to start the application
-3. The root command initializes the configuration and creates a new Bubble Tea program
-4. The main TUI model is initialized with sub-models for each AWS service
-5. The Bubble Tea program starts the event loop:
-   - Renders the UI based on the current model state
-   - Captures user input
-   - Updates the model state based on user input
-   - Rerenders the UI
+3. The root command initializes configuration and constructs the tview application with service factories
+4. Each service kicks off its initial AWS fetch asynchronously, scheduling redraws via `Application.QueueUpdateDraw`
+5. The tview event loop renders the active service, while global keybindings (`:`, `/`, `Esc`, `R`) are intercepted by the shell
 
-Navigation follows a tab-based approach, where users can switch between different AWS services. Each service has its own view with tables, forms, and other UI components for interacting with the service's resources.
+Navigation is hierarchical: the command palette swaps between services, `Enter` drills into child resources (e.g., hosted zones → records), and `Esc` climbs back up one level.
 
 ## Implementation Details
 
-### Bubble Tea Components
+### tview Components
 
-Hibiscus uses several Bubble Tea components:
-- `table`: For displaying tabular data (e.g., ECR repositories, Route53 records, ELB load balancers and listeners)
-- `spinner`: For showing loading states when fetching data from AWS
-- `textinput`: For text input fields
+Hibiscus relies on core tview primitives:
+
+- `Table`: renders paginated AWS data sets with keyboard selection
+- `InputField`: powers filter mode (`/`) and the `:` command palette
+- `Pages` / `Flex`: swap between hierarchy levels (repos → images, etc.) without rebuilding widgets
+- `Grid`: centers overlays such as the command palette and future modals
 
 ### AWS Integration
 
@@ -102,16 +103,18 @@ AWS integration is handled through the AWS SDK for Go, with credentials managed 
 
 ### Concurrency
 
-The application uses Go's concurrency features (goroutines and channels) through Bubble Tea's command system to handle asynchronous operations like fetching data from AWS APIs without blocking the UI.
+Each service fetches AWS data inside goroutines and marshals UI updates through `Application.QueueUpdateDraw`, ensuring the terminal remains responsive while API calls are in flight.
 
 ## Current Status and Future Direction
 
 As of the current implementation, Hibiscus supports viewing resources for:
+
 - Amazon ECR (Elastic Container Registry)
 - Amazon ELB (Elastic Load Balancer)
 - Amazon Route53 (DNS)
 
 Future plans include:
+
 - Adding support for more AWS services
 - Implementing resource editing capabilities
-- Adding more advanced filtering and search functionality 
+- Adding more advanced filtering and search functionality
