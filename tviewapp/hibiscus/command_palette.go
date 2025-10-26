@@ -109,16 +109,16 @@ func (c *commandPalette) Visible() bool {
 }
 
 func (c *commandPalette) choose(name string) {
-	if name == "" {
-		// fall back to the highlighted entry if any
-		if len(c.filtered) > 0 {
-			name = c.filtered[c.list.GetCurrentItem()]
-		}
-	}
-
 	name = strings.TrimSpace(strings.ToLower(name))
-	if !c.isValid(name) {
-		return
+	if name == "" || !c.isValid(name) {
+		if len(c.filtered) == 0 {
+			return
+		}
+		idx := c.list.GetCurrentItem()
+		if idx < 0 || idx >= len(c.filtered) {
+			idx = 0
+		}
+		name = c.filtered[idx]
 	}
 
 	c.Hide()
