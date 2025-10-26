@@ -1,10 +1,13 @@
 package route53
 
 import (
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -17,6 +20,7 @@ type App struct {
 	app *tview.Application
 
 	header       *tview.TextView
+	pages        *tview.Pages
 	zoneFilter   *tview.InputField
 	recordFilter *tview.InputField
 	zoneTable    *tview.Table
@@ -35,8 +39,11 @@ type App struct {
 	records         []types.ResourceRecordSet
 	filteredRecords []types.ResourceRecordSet
 
-	focusables []tview.Primitive
-	focusIdx   int
+	focusables   []tview.Primitive
+	focusIdx     int
+	recordRowMap map[int]int
+
+	modalVisible bool
 
 	mu                  sync.Mutex
 	loadHostedZonesOnce sync.Once
@@ -56,6 +63,7 @@ func NewApp() *App {
 		statusBar:    newStatusBar(),
 		errorBar:     newErrorBar(),
 		zoneRowToID:  map[int]string{},
+		recordRowMap: map[int]int{},
 	}
 
 	r.zoneFilter.SetChangedFunc(func(text string) {
@@ -89,6 +97,8 @@ func NewApp() *App {
 	}
 
 	r.layout = r.buildLayout()
+	r.pages = tview.NewPages().
+		AddPage("main", r.layout, true, true)
 
 	r.app.SetInputCapture(r.globalShortcuts)
 	r.app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
@@ -108,7 +118,7 @@ func NewApp() *App {
 
 // Run starts the application event loop.
 func (a *App) Run() error {
-	a.app.SetRoot(a.layout, true)
+	a.app.SetRoot(a.pages, true)
 	a.app.SetFocus(a.zoneTable)
 	return a.app.EnableMouse(true).Run()
 }
@@ -138,6 +148,14 @@ func (a *App) buildLayout() tview.Primitive {
 }
 
 func (a *App) globalShortcuts(event *tcell.EventKey) *tcell.EventKey {
+	if a.modalVisible {
+		if event.Key() == tcell.KeyEsc {
+			a.hideModal()
+			return nil
+		}
+		return event
+	}
+
 	switch {
 	case event.Key() == tcell.KeyCtrlC,
 		event.Key() == tcell.KeyCtrlQ,
@@ -170,6 +188,13 @@ func (a *App) globalShortcuts(event *tcell.EventKey) *tcell.EventKey {
 		}
 		if a.app.GetFocus() == a.recordTable && a.hasCurrentZone {
 			go a.loadRecords(a.currentZoneID)
+			return nil
+		}
+
+	case event.Rune() == 'e' || event.Rune() == 'E':
+		if a.app.GetFocus() == a.recordTable && a.hasCurrentZone {
+			row, _ := a.recordTable.GetSelection()
+			a.openEditRecordModal(row)
 			return nil
 		}
 	}
@@ -307,6 +332,7 @@ func (a *App) applyRecordFilter(query string) {
 
 func (a *App) refreshRecordTable() {
 	a.recordTable.Clear()
+	a.recordRowMap = map[int]int{}
 
 	headers := []string{"Record Name", "Type", "Value / Alias", "TTL", "Weight"}
 	for col, title := range headers {
@@ -314,12 +340,16 @@ func (a *App) refreshRecordTable() {
 	}
 
 	if len(a.filteredRecords) == 0 {
-		a.recordTable.SetCell(1, 0, tableCell("Select a hosted zone to load records").SetSelectable(false))
+		msg := "Select a hosted zone to load records"
+		if a.hasCurrentZone && len(a.records) > 0 {
+			msg = "No records matched this filter"
+		}
+		a.recordTable.SetCell(1, 0, tableCell(msg).SetSelectable(false))
 		return
 	}
 
 	row := 1
-	for _, record := range a.filteredRecords {
+	for idx, record := range a.filteredRecords {
 		values := formatRecordValues(record)
 		ttl := ""
 		if record.TTL != nil {
@@ -336,6 +366,7 @@ func (a *App) refreshRecordTable() {
 			a.recordTable.SetCell(row, 2, tableCell(val))
 			a.recordTable.SetCell(row, 3, tableCell(ttl))
 			a.recordTable.SetCell(row, 4, tableCell(weight))
+			a.recordRowMap[row] = idx
 			row++
 		}
 	}
@@ -477,4 +508,180 @@ func (a *App) setError(err error) {
 		return
 	}
 	a.errorBar.SetText(fmt.Sprintf("[red]Error: %s[-]", err.Error()))
+}
+
+func (a *App) recordFromRow(row int) (*types.ResourceRecordSet, bool) {
+	idx, ok := a.recordRowMap[row]
+	if !ok {
+		return nil, false
+	}
+	if idx < 0 || idx >= len(a.filteredRecords) {
+		return nil, false
+	}
+	return &a.filteredRecords[idx], true
+}
+
+func (a *App) openEditRecordModal(row int) {
+	if !a.hasCurrentZone {
+		a.setStatus("Select a hosted zone first")
+		return
+	}
+
+	record, ok := a.recordFromRow(row)
+	if !ok {
+		a.setStatus("Select a record to edit")
+		return
+	}
+
+	if record.AliasTarget != nil || len(record.ResourceRecords) == 0 {
+		a.setError(errors.New("editing alias records isn't supported in this PoC"))
+		return
+	}
+
+	valueField := tview.NewInputField().
+		SetLabel("Values (comma separated) ").
+		SetText(strings.Join(recordValueStrings(*record), ", "))
+	ttlField := tview.NewInputField().
+		SetLabel("TTL (seconds) ")
+	if record.TTL != nil {
+		ttlField.SetText(fmt.Sprintf("%d", *record.TTL))
+	}
+
+	form := tview.NewForm().
+		AddFormItem(valueField).
+		AddFormItem(ttlField).
+		AddButton("Save", func() {
+			a.submitRecordEdit(*record, valueField.GetText(), ttlField.GetText())
+		}).
+		AddButton("Cancel", func() {
+			a.hideModal()
+		})
+	form.SetBorder(true)
+	form.SetTitle(fmt.Sprintf("Edit %s (%s)", strings.TrimSuffix(*record.Name, "."), record.Type))
+	form.SetTitleAlign(tview.AlignLeft)
+	form.SetButtonsAlign(tview.AlignCenter)
+
+	helper := tview.NewTextView().
+		SetDynamicColors(true).
+		SetText("Separate multiple values with commas. Leave TTL blank to keep the current value.")
+	helper.SetBorder(false)
+
+	content := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(form, 0, 1, true).
+		AddItem(helper, 2, 0, false)
+
+	a.showModal(content, 80, 14)
+	a.app.SetFocus(valueField)
+}
+
+func (a *App) submitRecordEdit(original types.ResourceRecordSet, valuesRaw, ttlRaw string) {
+	values, err := parseRecordValues(valuesRaw)
+	if err != nil {
+		a.setError(err)
+		return
+	}
+
+	ttl, err := parseTTL(ttlRaw, original.TTL)
+	if err != nil {
+		a.setError(err)
+		return
+	}
+
+	updated := original
+	updated.ResourceRecords = make([]types.ResourceRecord, len(values))
+	for i, val := range values {
+		updated.ResourceRecords[i] = types.ResourceRecord{Value: aws.String(val)}
+	}
+	updated.TTL = ttl
+
+	zoneID := a.currentZoneID
+	a.setStatus("Updating record...")
+
+	go func(record types.ResourceRecordSet, hostedZoneID string) {
+		id := hostedZoneID
+		err := route53.UpsertRecord(&id, record)
+		a.app.QueueUpdateDraw(func() {
+			if err != nil {
+				a.setError(fmt.Errorf("failed to update record: %w", err))
+				a.setStatus("Update failed")
+				return
+			}
+
+			a.setError(nil)
+			a.setStatus("Record updated")
+			a.hideModal()
+			go a.loadRecords(hostedZoneID)
+		})
+	}(updated, zoneID)
+}
+
+func parseRecordValues(input string) ([]string, error) {
+	raw := strings.TrimSpace(input)
+	if raw == "" {
+		return nil, errors.New("record value cannot be empty")
+	}
+
+	parts := strings.Split(raw, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			values = append(values, trimmed)
+		}
+	}
+
+	if len(values) == 0 {
+		return nil, errors.New("record value cannot be empty")
+	}
+
+	return values, nil
+}
+
+func parseTTL(input string, fallback *int64) (*int64, error) {
+	value := strings.TrimSpace(input)
+	if value == "" {
+		return fallback, nil
+	}
+
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || parsed < 0 {
+		return nil, fmt.Errorf("invalid TTL: %s", value)
+	}
+
+	return aws.Int64(parsed), nil
+}
+
+func recordValueStrings(record types.ResourceRecordSet) []string {
+	values := make([]string, 0, len(record.ResourceRecords))
+	for _, rr := range record.ResourceRecords {
+		if rr.Value != nil {
+			values = append(values, strings.TrimSpace(*rr.Value))
+		}
+	}
+	return values
+}
+
+func (a *App) showModal(content tview.Primitive, width, height int) {
+	if a.modalVisible {
+		a.pages.RemovePage("modal")
+	}
+	a.modalVisible = true
+	a.pages.AddPage("modal", centerPrimitive(content, width, height), true, true)
+}
+
+func (a *App) hideModal() {
+	if !a.modalVisible {
+		return
+	}
+	a.modalVisible = false
+	a.pages.RemovePage("modal")
+	a.setFocus(a.recordTable)
+}
+
+func centerPrimitive(content tview.Primitive, width, height int) tview.Primitive {
+	grid := tview.NewGrid().
+		SetColumns(0, width, 0).
+		SetRows(0, height, 0).
+		AddItem(content, 1, 1, 1, 1, 0, 0, true)
+	grid.SetBackgroundColor(tcell.ColorBlack)
+	return grid
 }
