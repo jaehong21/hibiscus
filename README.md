@@ -30,6 +30,9 @@ Alternatively, you can download the latest release from the [GitHub Releases pag
 To start using Hibiscus, simply run the following command in your terminal:
 
 ```bash
+# add alias for convenience at your shell config (optional)
+# alias hb='hibiscus'
+
 hibiscus # using 'default' AWS CLI profile
 hibiscus --profile prod # with AWS CLI profile
 ```
@@ -93,7 +96,7 @@ Note that AWS profile settings are NOT persisted and must be provided with the `
 | :---------------------: | :--: | :--: | :-----------------------------------------------------------------------------------: |
 |       Amazon ECR        |  ✓   |  ✕   |           Easily store, share, and deploy your container software anywhere            |
 |     AWS ECR Public      |  ✕   |  ✕   |      Easily store, share, and deploy your container software anywhere in public       |
-|     Amazon Route53      |  ✓   |  ✓   |     Browse hosted zones and edit record type/value/TTL directly from the TUI         |
+|     Amazon Route53      |  ✓   |  ✓   |       Browse hosted zones and edit record type/value/TTL directly from the TUI        |
 |       Amazon ELB        |  ✓   |  ✕   |             Distribute network traffic to improve application scalability             |
 | AWS SSM Parameter Store |  ✕   |  ✕   | Secure, hierarchical storage for configuration data management and secrets management |
 
