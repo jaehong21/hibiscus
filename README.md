@@ -41,6 +41,7 @@ hibiscus --profile prod # with AWS CLI profile
 - `Enter` – drill down one level (repo → images, zone → records, load balancer → listeners → rules)
 - `Esc` – back out of the current level or exit filter mode
 - `R` – refresh the active view
+- `e` / `Ctrl+D` (Route53 records) – edit the selected record's type/value/TTL or confirm deletion before removing it
 - `Ctrl+C` – quit the application
 
 ### Route53 tview proof of concept
@@ -92,7 +93,7 @@ Note that AWS profile settings are NOT persisted and must be provided with the `
 | :---------------------: | :--: | :--: | :-----------------------------------------------------------------------------------: |
 |       Amazon ECR        |  ✓   |  ✕   |           Easily store, share, and deploy your container software anywhere            |
 |     AWS ECR Public      |  ✕   |  ✕   |      Easily store, share, and deploy your container software anywhere in public       |
-|     Amazon Route53      |  ✓   |  ✕   |     A reliable and cost-effective way to route end users to Internet applications     |
+|     Amazon Route53      |  ✓   |  ✓   |     Browse hosted zones and edit record type/value/TTL directly from the TUI         |
 |       Amazon ELB        |  ✓   |  ✕   |             Distribute network traffic to improve application scalability             |
 | AWS SSM Parameter Store |  ✕   |  ✕   | Secure, hierarchical storage for configuration data management and secrets management |
 
