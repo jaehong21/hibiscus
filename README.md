@@ -34,6 +34,23 @@ hibiscus # using 'default' AWS CLI profile
 hibiscus --profile prod # with AWS CLI profile
 ```
 
+### Route53 tview proof of concept
+
+This branch also ships a standalone tview-based prototype for the Route53 experience.  
+Run it directly from source:
+
+```bash
+go run ./cmd/route53tview --profile prod
+```
+
+Key bindings:
+- `Tab` / `Shift+Tab` – switch focus between the hosted zone table, filters, and records table.
+- `/` – jump into the active table's filter input.
+- `R` – refresh the focused table (hosted zones or records).
+- `Ctrl+C` or `q` – exit the prototype.
+
+The left table lists hosted zones, the right table shows records for the selected zone, and both panes support live filtering.
+
 <!-- This will launch the Hibiscus UI, where you can navigate through your AWS services and resources using the keyboard. Refer to the [documentation](https://github.com/your-github-username/hibiscus/wiki) for more information on the available commands and features. -->
 
 ## Configuration
