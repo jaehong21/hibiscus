@@ -47,27 +47,6 @@ hibiscus --profile prod # with AWS CLI profile
 - `e` / `Ctrl+D` (Route53 records) – edit the selected record's type/value/TTL or confirm deletion before removing it
 - `Ctrl+C` – quit the application
 
-### Route53 tview proof of concept
-
-The primary `hibiscus` command now uses tview for every AWS surface, but this branch keeps a dedicated Route53 prototype so we can continue experimenting with record-edit modals.
-Run it directly from source:
-
-```bash
-go run ./cmd/route53tview --profile prod
-```
-
-Key bindings (prototype):
-
-- `Tab` / `Shift+Tab` – switch focus between the hosted zone table, filters, and records table.
-- `/` – jump into the active table's filter input.
-- `R` – refresh the focused table (hosted zones or records).
-- `e` – edit the selected record's values/TTL (non-alias records only).
-- `Ctrl+C` or `q` – exit the prototype.
-
-The left table lists hosted zones, the right table shows records for the selected zone, and both panes support live filtering.
-
-<!-- This will launch the Hibiscus UI, where you can navigate through your AWS services and resources using the keyboard. Refer to the [documentation](https://github.com/your-github-username/hibiscus/wiki) for more information on the available commands and features. -->
-
 ## Configuration
 
 Hibiscus automatically saves your last used service tab (ECR, Route53, ELB, etc.) between sessions, so you can pick up right where you left off.
