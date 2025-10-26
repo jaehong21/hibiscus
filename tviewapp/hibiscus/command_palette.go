@@ -1,6 +1,7 @@
 package hibiscus
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -145,12 +146,7 @@ func (c *commandPalette) updateSuggestions(query string) {
 }
 
 func (c *commandPalette) isValid(name string) bool {
-	for _, svc := range c.services {
-		if svc == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.services, name)
 }
 
 func centerPrimitive(content tview.Primitive, width, height int) tview.Primitive {
