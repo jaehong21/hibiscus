@@ -203,7 +203,7 @@ func (a *App) updateHeader() {
 		title = "Select a service with :"
 	}
 
-	helper := "[: ]command  [/]filter  [R]refresh  [Esc]back  [Ctrl+C]quit"
+	helper := tview.Escape("[: ]command  [/]filter  [R]refresh  [Esc]back  [Ctrl+C]quit")
 	a.header.SetText(fmt.Sprintf("[yellow]Hibiscus[-] – %s  %s", title, helper))
 }
 
