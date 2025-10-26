@@ -2,6 +2,8 @@ package route53
 
 import (
 	"fmt"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -21,10 +23,34 @@ const (
 	recordTab
 )
 
+const (
+	contentPageName     = "route53-content"
+	editModalPageName   = "route53-edit-modal"
+	deleteModalPageName = "route53-delete-modal"
+)
+
+var editableRecordTypes = []string{
+	"A",
+	"AAAA",
+	"CNAME",
+	"MX",
+	"NS",
+	"PTR",
+	"SRV",
+	"TXT",
+	"CAA",
+	"SPF",
+	"SOA",
+	"NAPTR",
+	"DS",
+	"DNSKEY",
+}
+
 // Service implements the hibiscus.Service interface for Amazon Route53.
 type Service struct {
 	ctx hibiscus.ServiceContext
 
+	root      *tview.Pages
 	layout    *tview.Flex
 	pages     *tview.Pages
 	filter    *tview.InputField
@@ -44,6 +70,8 @@ type Service struct {
 
 	mu     sync.Mutex
 	active bool
+
+	activeModal string
 }
 
 func New(ctx hibiscus.ServiceContext) hibiscus.Service {
@@ -68,6 +96,9 @@ func New(ctx hibiscus.ServiceContext) hibiscus.Service {
 		AddItem(svc.filter, 1, 0, true).
 		AddItem(svc.pages, 0, 1, true)
 
+	svc.root = tview.NewPages()
+	svc.root.AddPage(contentPageName, svc.layout, true, true)
+
 	svc.filter.SetDoneFunc(func(key tcell.Key) {
 		switch key {
 		case tcell.KeyEnter:
@@ -83,7 +114,7 @@ func New(ctx hibiscus.ServiceContext) hibiscus.Service {
 func (s *Service) Name() string  { return "route53" }
 func (s *Service) Title() string { return "Amazon Route53 – hosted zones › records" }
 func (s *Service) Primitive() tview.Primitive {
-	return s.layout
+	return s.root
 }
 
 func (s *Service) Init() {
@@ -108,7 +139,7 @@ func (s *Service) Refresh() {
 }
 
 func (s *Service) EnterFilterMode() bool {
-	if !s.canFocus() {
+	if !s.canFocus() || s.modalVisible() {
 		return false
 	}
 	s.ctx.App.SetFocus(s.filter)
@@ -122,6 +153,14 @@ func (s *Service) InFilterMode() bool {
 func (s *Service) HandleInput(event *tcell.EventKey) *tcell.EventKey {
 	if event == nil {
 		return nil
+	}
+
+	if s.modalVisible() {
+		if event.Key() == tcell.KeyEsc {
+			s.closeModal()
+			return nil
+		}
+		return event
 	}
 
 	switch event.Key() {
@@ -139,6 +178,19 @@ func (s *Service) HandleInput(event *tcell.EventKey) *tcell.EventKey {
 			s.openSelectedZone()
 			return nil
 		}
+	case tcell.KeyCtrlD:
+		if s.recTable.HasFocus() {
+			s.confirmDeleteRecord()
+			return nil
+		}
+	}
+
+	switch event.Rune() {
+	case 'e', 'E':
+		if s.recTable.HasFocus() {
+			s.openEditRecord()
+			return nil
+		}
 	}
 
 	return event
@@ -146,6 +198,9 @@ func (s *Service) HandleInput(event *tcell.EventKey) *tcell.EventKey {
 
 func (s *Service) exitFilterMode() {
 	s.filter.SetText("")
+	if s.modalVisible() {
+		return
+	}
 	if s.current == recordTab {
 		s.setFocus(s.recTable)
 	} else {
@@ -323,11 +378,224 @@ func (s *Service) renderRecords() {
 	table.Select(1, 0)
 }
 
+func (s *Service) selectedRecord() (types.ResourceRecordSet, bool) {
+	if s.current != recordTab || len(s.filteredRecords) == 0 {
+		return types.ResourceRecordSet{}, false
+	}
+	row, _ := s.recTable.GetSelection()
+	idx, ok := s.recordRowMap[row]
+	if !ok || idx < 0 || idx >= len(s.filteredRecords) {
+		return types.ResourceRecordSet{}, false
+	}
+	return s.filteredRecords[idx], true
+}
+
+func (s *Service) openEditRecord() {
+	if s.currentZoneID == "" {
+		s.ctx.SetStatus("Select a hosted zone first")
+		return
+	}
+	record, ok := s.selectedRecord()
+	if !ok {
+		s.ctx.SetStatus("Select a record to edit")
+		return
+	}
+	if record.AliasTarget != nil {
+		s.ctx.SetStatus("Alias records are read-only")
+		return
+	}
+	if len(record.ResourceRecords) == 0 {
+		s.ctx.SetStatus("This record has no editable values")
+		return
+	}
+
+	form := s.buildEditForm(record)
+	s.showModal(editModalPageName, centerPrimitive(form, 80, 18))
+	if s.ctx.App != nil {
+		s.ctx.App.SetFocus(form)
+	}
+}
+
+func (s *Service) buildEditForm(record types.ResourceRecordSet) *tview.Form {
+	name := trimDot(aws.ToString(record.Name))
+	ttl := ""
+	if record.TTL != nil {
+		ttl = fmt.Sprintf("%d", *record.TTL)
+	}
+	valueText := strings.Join(rawRecordValues(record), "\n")
+
+	options := append([]string(nil), editableRecordTypes...)
+	currentType := string(record.Type)
+	idx := slices.Index(options, currentType)
+	if idx == -1 && currentType != "" {
+		options = append(options, currentType)
+		idx = len(options) - 1
+	}
+
+	nameView := tview.NewTextView().
+		SetLabel("Name: ").
+		SetText(name).
+		SetScrollable(false)
+
+	typeDrop := tview.NewDropDown().
+		SetLabel("Type: ").
+		SetOptions(options, nil)
+	if idx >= 0 {
+		typeDrop.SetCurrentOption(idx)
+	}
+
+	valueArea := tview.NewTextArea().
+		SetLabel("Value(s): ").
+		SetSize(5, 0).
+		SetPlaceholder("One value per line or comma separated").
+		SetText(valueText, true)
+
+	ttlInput := tview.NewInputField().
+		SetLabel("TTL (seconds): ").
+		SetText(ttl).
+		SetAcceptanceFunc(tview.InputFieldInteger)
+
+	form := tview.NewForm().
+		AddFormItem(nameView).
+		AddFormItem(typeDrop).
+		AddFormItem(valueArea).
+		AddFormItem(ttlInput)
+
+	form.AddButton("Save", func() {
+		_, rrType := typeDrop.GetCurrentOption()
+		if rrType == "" {
+			s.ctx.SetError(fmt.Errorf("record type is required"))
+			return
+		}
+
+		values := parseRecordInputValues(valueArea.GetText())
+		if len(values) == 0 {
+			s.ctx.SetError(fmt.Errorf("at least one record value is required"))
+			return
+		}
+
+		ttlText := strings.TrimSpace(ttlInput.GetText())
+		if ttlText == "" {
+			s.ctx.SetError(fmt.Errorf("ttl is required"))
+			return
+		}
+		ttlNumber, err := strconv.ParseInt(ttlText, 10, 64)
+		if err != nil || ttlNumber <= 0 {
+			s.ctx.SetError(fmt.Errorf("ttl must be a positive number"))
+			return
+		}
+
+		s.closeModal()
+		s.submitRecordUpdate(record, types.RRType(rrType), ttlNumber, values)
+	})
+
+	form.AddButton("Cancel", func() {
+		s.closeModal()
+	})
+
+	form.SetTitle(fmt.Sprintf("Edit record – %s", name))
+	form.SetBorder(true)
+	form.SetTitleAlign(tview.AlignLeft)
+	form.SetButtonsAlign(tview.AlignRight)
+
+	return form
+}
+
+func (s *Service) submitRecordUpdate(record types.ResourceRecordSet, rrType types.RRType, ttl int64, values []string) {
+	if s.currentZoneID == "" {
+		s.ctx.SetStatus("Select a hosted zone first")
+		return
+	}
+
+	name := trimDot(aws.ToString(record.Name))
+	zoneID := s.currentZoneID
+	s.ctx.SetError(nil)
+	s.ctx.SetStatus(fmt.Sprintf("Updating %s...", name))
+
+	updated := record
+	updated.Type = rrType
+	updated.TTL = aws.Int64(ttl)
+	updated.AliasTarget = nil
+	updated.ResourceRecords = make([]types.ResourceRecord, len(values))
+	for i, val := range values {
+		v := val
+		updated.ResourceRecords[i] = types.ResourceRecord{
+			Value: aws.String(v),
+		}
+	}
+
+	go func() {
+		err := awsr53.UpsertRecord(&zoneID, updated)
+		s.ctx.App.QueueUpdateDraw(func() {
+			if err != nil {
+				s.ctx.SetError(fmt.Errorf("update record: %w", err))
+				return
+			}
+			s.ctx.SetStatus(fmt.Sprintf("Updated %s", name))
+			s.loadRecords(zoneID)
+		})
+	}()
+}
+
+func (s *Service) confirmDeleteRecord() {
+	if s.currentZoneID == "" {
+		s.ctx.SetStatus("Select a hosted zone first")
+		return
+	}
+	record, ok := s.selectedRecord()
+	if !ok {
+		s.ctx.SetStatus("Select a record to delete")
+		return
+	}
+	name := trimDot(aws.ToString(record.Name))
+	text := fmt.Sprintf("Delete %s (%s)?", name, record.Type)
+
+	modal := tview.NewModal().
+		SetText(text).
+		AddButtons([]string{"Cancel", "Delete"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			s.closeModal()
+			if buttonLabel == "Delete" {
+				s.deleteRecord(record)
+			}
+		})
+
+	s.showModal(deleteModalPageName, centerPrimitive(modal, 60, 12))
+	if s.ctx.App != nil {
+		s.ctx.App.SetFocus(modal)
+	}
+}
+
+func (s *Service) deleteRecord(record types.ResourceRecordSet) {
+	if s.currentZoneID == "" {
+		s.ctx.SetStatus("Select a hosted zone first")
+		return
+	}
+	name := trimDot(aws.ToString(record.Name))
+	zoneID := s.currentZoneID
+	s.ctx.SetError(nil)
+	s.ctx.SetStatus(fmt.Sprintf("Deleting %s...", name))
+
+	go func() {
+		err := awsr53.DeleteRecord(&zoneID, record)
+		s.ctx.App.QueueUpdateDraw(func() {
+			if err != nil {
+				s.ctx.SetError(fmt.Errorf("delete record: %w", err))
+				return
+			}
+			s.ctx.SetStatus(fmt.Sprintf("Deleted %s", name))
+			s.loadRecords(zoneID)
+		})
+	}()
+}
+
 func (s *Service) showZoneTab() {
 	s.current = zoneTab
 	s.pages.SwitchToPage("zones")
 	s.zoneTable.SetTitle("Route53 hosted zones")
-	s.setFocus(s.zoneTable)
+	if !s.modalVisible() {
+		s.setFocus(s.zoneTable)
+	}
 }
 
 func (s *Service) showRecordTab() {
@@ -338,7 +606,9 @@ func (s *Service) showRecordTab() {
 	}
 	s.recTable.SetTitle(title)
 	s.pages.SwitchToPage("records")
-	s.setFocus(s.recTable)
+	if !s.modalVisible() {
+		s.setFocus(s.recTable)
+	}
 }
 
 func zoneMatches(zone types.HostedZone, query string) bool {
@@ -398,6 +668,33 @@ func formatRecordValues(record types.ResourceRecordSet) []string {
 	return []string{"-"}
 }
 
+func rawRecordValues(record types.ResourceRecordSet) []string {
+	values := make([]string, 0, len(record.ResourceRecords))
+	for _, rr := range record.ResourceRecords {
+		if rr.Value != nil {
+			val := strings.TrimSpace(*rr.Value)
+			if val != "" {
+				values = append(values, val)
+			}
+		}
+	}
+	return values
+}
+
+func parseRecordInputValues(input string) []string {
+	parts := strings.Split(input, "\n")
+	values := make([]string, 0, len(parts))
+	for _, line := range parts {
+		for chunk := range strings.SplitSeq(line, ",") {
+			val := strings.TrimSpace(chunk)
+			if val != "" {
+				values = append(values, val)
+			}
+		}
+	}
+	return values
+}
+
 func trimDot(value string) string {
 	return strings.TrimSuffix(value, ".")
 }
@@ -437,9 +734,45 @@ func (s *Service) setFocus(p tview.Primitive) {
 }
 
 func (s *Service) focusCurrentTable() {
+	if s.modalVisible() {
+		return
+	}
 	if s.current == recordTab {
 		s.setFocus(s.recTable)
 	} else {
 		s.setFocus(s.zoneTable)
 	}
+}
+
+func (s *Service) showModal(name string, content tview.Primitive) {
+	if s.root == nil || content == nil {
+		return
+	}
+	if s.modalVisible() {
+		s.root.RemovePage(s.activeModal)
+	}
+	s.root.AddPage(name, content, true, true)
+	s.activeModal = name
+}
+
+func (s *Service) closeModal() {
+	if !s.modalVisible() || s.root == nil {
+		return
+	}
+	s.root.RemovePage(s.activeModal)
+	s.activeModal = ""
+	s.focusCurrentTable()
+}
+
+func (s *Service) modalVisible() bool {
+	return s.activeModal != ""
+}
+
+func centerPrimitive(content tview.Primitive, width, height int) tview.Primitive {
+	grid := tview.NewGrid().
+		SetColumns(0, width, 0).
+		SetRows(0, height, 0).
+		AddItem(content, 1, 1, 1, 1, 0, 0, true)
+	grid.SetBackgroundColor(tcell.ColorBlack)
+	return grid
 }

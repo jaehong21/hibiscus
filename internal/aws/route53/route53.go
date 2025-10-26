@@ -182,6 +182,26 @@ func UpsertRecord(hostedZoneID *string, record types.ResourceRecordSet) error {
 	return err
 }
 
+func DeleteRecord(hostedZoneID *string, record types.ResourceRecordSet) error {
+	if err := setupClient(); err != nil {
+		return err
+	}
+
+	_, err := client.ChangeResourceRecordSets(context.TODO(), &route53.ChangeResourceRecordSetsInput{
+		HostedZoneId: hostedZoneID,
+		ChangeBatch: &types.ChangeBatch{
+			Changes: []types.Change{
+				{
+					Action:            types.ChangeActionDelete,
+					ResourceRecordSet: &record,
+				},
+			},
+		},
+	})
+
+	return err
+}
+
 func setupClient() error {
 	if client != nil {
 		return nil
