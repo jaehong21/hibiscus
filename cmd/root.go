@@ -28,7 +28,7 @@ var awsProfile string
 func init() {
 	rootCmd.AddCommand(versionCmd)
 
-	rootCmd.Flags().StringVarP(&awsProfile, "profile", "p", "default", "AWS profile to use")
+	rootCmd.Flags().StringVarP(&awsProfile, "profile", "p", config.DefaultAwsProfile(), "AWS profile to use")
 }
 
 var rootCmd = &cobra.Command{

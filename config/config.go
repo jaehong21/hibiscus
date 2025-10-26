@@ -14,6 +14,17 @@ type Config struct {
 	TabKey     int
 }
 
+// DefaultAwsProfile returns the AWS profile hibiscus should use when none is provided via CLI flag
+func DefaultAwsProfile() string {
+	if profile := os.Getenv("AWS_PROFILE"); profile != "" {
+		return profile
+	}
+	if profile := os.Getenv("AWS_DEFAULT_PROFILE"); profile != "" {
+		return profile
+	}
+	return "default"
+}
+
 // HibiscusConfig wraps the persistent config in a top-level 'hibiscus' key
 type HibiscusConfig struct {
 	Hibiscus PersistentConfig `yaml:"hibiscus"`
@@ -75,7 +86,7 @@ func Initialize() *Config {
 
 	// Create default config
 	globalConfig = &Config{
-		AwsProfile: "default",
+		AwsProfile: DefaultAwsProfile(),
 		TabKey:     ECR_TAB, // Default tab
 	}
 
