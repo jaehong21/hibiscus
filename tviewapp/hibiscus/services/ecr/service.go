@@ -114,6 +114,10 @@ func (s *Service) EnterFilterMode() bool {
 	return true
 }
 
+func (s *Service) InFilterMode() bool {
+	return s.filter.HasFocus()
+}
+
 func (s *Service) HandleInput(event *tcell.EventKey) *tcell.EventKey {
 	if event == nil {
 		return nil

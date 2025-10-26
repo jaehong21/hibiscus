@@ -139,10 +139,20 @@ func (a *App) handleGlobalInput(event *tcell.EventKey) *tcell.EventKey {
 		return event
 	}
 
-	switch {
-	case event.Key() == tcell.KeyCtrlC:
+	filtering := a.current != nil && a.current.InFilterMode()
+
+	if event.Key() == tcell.KeyCtrlC {
 		a.app.Stop()
 		return nil
+	}
+
+	if filtering {
+		// Let the focused filter field consume the keystroke; Esc will bubble
+		// down to the service to exit filter mode.
+		return event
+	}
+
+	switch {
 	case event.Rune() == ':':
 		if a.palette != nil {
 			a.palette.Show()

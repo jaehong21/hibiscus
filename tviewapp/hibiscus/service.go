@@ -34,6 +34,9 @@ type Service interface {
 	// EnterFilterMode should focus the service's filter input (if any) and
 	// return true when it took action.
 	EnterFilterMode() bool
+	// InFilterMode should return true while the service owns keyboard input
+	// for filtering so global keybindings can be temporarily disabled.
+	InFilterMode() bool
 	// HandleInput gives the service a chance to consume key events that
 	// aren't handled globally. Return nil to consume the event.
 	HandleInput(event *tcell.EventKey) *tcell.EventKey
